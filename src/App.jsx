@@ -420,8 +420,10 @@ function ProductsView({
   selectedProduct,
   selectedProductLoading,
   onProductSelect,
+  productDetailError,
+  productsError,
 }) {
-  const totalPages = Math.max(1, Math.ceil((products?.total || 0) / (products?.page_size || 24)));
+  const totalPages = Math.max(1, Math.ceil((products?.total || 0) / (products?.page_size || 8)));
 
   return (
     <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_380px]">
@@ -464,7 +466,13 @@ function ProductsView({
         </article>
 
         <article className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-[0_12px_32px_rgba(16,34,39,0.06)]">
-          <div className="space-y-3">
+          {productsError ? (
+            <div className="mb-4 rounded-2xl bg-[#ef8f5a]/10 px-4 py-3 text-sm text-[#b65a29]">
+              {productsError}
+            </div>
+          ) : null}
+
+          <div className="max-h-[62vh] space-y-3 overflow-y-auto pr-1">
             {(products?.items || []).map((product) => (
               <button
                 className={`w-full rounded-[24px] border px-4 py-4 text-left transition ${
@@ -526,11 +534,17 @@ function ProductsView({
         </article>
       </section>
 
-      <aside className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-[0_12px_32px_rgba(16,34,39,0.06)]">
+      <aside className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-[0_12px_32px_rgba(16,34,39,0.06)] xl:sticky xl:top-6 xl:self-start">
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-semibold text-ink">Product detail</h3>
           <ArrowRight aria-hidden="true" className="text-[#d9773f]" size={18} />
         </div>
+
+        {productDetailError ? (
+          <div className="mt-5 rounded-2xl bg-[#ef8f5a]/10 px-4 py-3 text-sm text-[#b65a29]">
+            {productDetailError}
+          </div>
+        ) : null}
 
         {selectedProductLoading ? (
           <div className="mt-6 rounded-[24px] border border-dashed border-slate-200 px-4 py-10 text-center text-sm text-slate-500">
@@ -632,15 +646,31 @@ function App() {
 
   const [summary, setSummary] = useState(null);
   const [summaryLoading, setSummaryLoading] = useState(false);
+  const [summaryError, setSummaryError] = useState("");
 
   const [page, setPage] = useState(1);
   const [filters, setFilters] = useState(defaultFilters);
   const deferredFilters = useDeferredValue(filters);
-  const [products, setProducts] = useState({ items: [], page: 1, page_size: 24, total: 0 });
+  const [products, setProducts] = useState({ items: [], page: 1, page_size: 8, total: 0 });
   const [productsLoading, setProductsLoading] = useState(false);
+  const [productsError, setProductsError] = useState("");
   const [selectedStyleNumber, setSelectedStyleNumber] = useState("WFX-2501");
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [selectedProductLoading, setSelectedProductLoading] = useState(false);
+  const [productDetailError, setProductDetailError] = useState("");
+
+  function loadDashboardSummary() {
+    setSummaryLoading(true);
+    setSummaryError("");
+    getDashboardSummary()
+      .then((data) => setSummary(data))
+      .catch((error) => {
+        const message = error.response?.data?.detail || "Unable to load dashboard summary.";
+        setSummaryError(message);
+        toast.error(message);
+      })
+      .finally(() => setSummaryLoading(false));
+  }
 
   useEffect(() => {
     const token = getStoredToken();
@@ -664,13 +694,7 @@ function App() {
       return;
     }
 
-    setSummaryLoading(true);
-    getDashboardSummary()
-      .then((data) => setSummary(data))
-      .catch((error) => {
-        toast.error(error.response?.data?.detail || "Unable to load dashboard summary.");
-      })
-      .finally(() => setSummaryLoading(false));
+    loadDashboardSummary();
   }, [user]);
 
   useEffect(() => {
@@ -679,19 +703,31 @@ function App() {
     }
 
     setProductsLoading(true);
+    setProductsError("");
     getProducts({
       page,
-      page_size: 24,
+      page_size: 8,
       ...deferredFilters,
     })
       .then((data) => {
         setProducts(data);
-        if (data.items?.length && !selectedStyleNumber) {
+        if (!data.items?.length) {
+          setSelectedProduct(null);
+          return;
+        }
+
+        const selectedStillVisible = data.items.some(
+          (item) => item.style_number === selectedStyleNumber,
+        );
+
+        if (!selectedStillVisible) {
           setSelectedStyleNumber(data.items[0].style_number);
         }
       })
       .catch((error) => {
-        toast.error(error.response?.data?.detail || "Unable to load products.");
+        const message = error.response?.data?.detail || "Unable to load products.";
+        setProductsError(message);
+        toast.error(message);
       })
       .finally(() => setProductsLoading(false));
   }, [user, page, deferredFilters]);
@@ -702,10 +738,13 @@ function App() {
     }
 
     setSelectedProductLoading(true);
+    setProductDetailError("");
     getProductDetail(selectedStyleNumber)
       .then((data) => setSelectedProduct(data))
       .catch((error) => {
-        toast.error(error.response?.data?.detail || "Unable to load product detail.");
+        const message = error.response?.data?.detail || "Unable to load product detail.";
+        setProductDetailError(message);
+        toast.error(message);
       })
       .finally(() => setSelectedProductLoading(false));
   }, [user, selectedStyleNumber]);
@@ -727,7 +766,7 @@ function App() {
     clearSession();
     setUser(null);
     setSummary(null);
-    setProducts({ items: [], page: 1, page_size: 24, total: 0 });
+    setProducts({ items: [], page: 1, page_size: 8, total: 0 });
     setSelectedProduct(null);
     setSelectedStyleNumber("WFX-2501");
     toast.success("Signed out.");
@@ -759,7 +798,7 @@ function App() {
   return (
     <main className="min-h-screen bg-[linear-gradient(180deg,#f4efe8_0%,#f8faf9_36%,#edf3f2_100%)] text-ink">
       <div className="flex min-h-screen">
-        <aside className="hidden w-72 shrink-0 border-r border-[#d8dfdd] bg-white/75 px-5 py-6 backdrop-blur lg:flex lg:flex-col">
+        <aside className="hidden h-screen w-72 shrink-0 border-r border-[#d8dfdd] bg-white/75 px-5 py-6 backdrop-blur lg:sticky lg:top-0 lg:flex lg:flex-col">
           <div className="flex items-center gap-3">
             <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#102227] text-white">
               <Sparkles aria-hidden="true" size={23} />
@@ -840,9 +879,25 @@ function App() {
             </div>
           </header>
 
-          <div className="flex-1 px-5 py-6 md:px-8">
+          <div className="flex-1 overflow-y-auto px-5 py-6 md:px-8">
             {activeView === "dashboard" ? (
-              <DashboardView loading={summaryLoading} summary={summary} />
+              <div className="space-y-4">
+                {summaryError ? (
+                  <div className="rounded-2xl border border-[#ef8f5a]/30 bg-[#fff4ed] px-4 py-4 text-sm text-[#b65a29]">
+                    <div className="flex items-center justify-between gap-4">
+                      <span>{summaryError}</span>
+                      <button
+                        className="rounded-xl bg-white px-3 py-2 text-xs font-semibold text-ink shadow-sm"
+                        onClick={loadDashboardSummary}
+                        type="button"
+                      >
+                        Retry
+                      </button>
+                    </div>
+                  </div>
+                ) : null}
+                <DashboardView loading={summaryLoading} summary={summary} />
+              </div>
             ) : null}
 
             {activeView === "products" ? (
@@ -856,6 +911,8 @@ function App() {
                 productsLoading={productsLoading}
                 selectedProduct={selectedProduct}
                 selectedProductLoading={selectedProductLoading}
+                productDetailError={productDetailError}
+                productsError={productsError}
               />
             ) : null}
 

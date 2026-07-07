@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { motion } from "framer-motion";
 import {
   ArrowUpRight,
@@ -10,10 +11,15 @@ import {
   Factory,
   FileSearch,
   Image,
+  LockKeyhole,
+  LogOut,
+  Mail,
   PackageSearch,
   Search,
+  ShieldCheck,
   Sparkles,
   TrendingUp,
+  UserRound,
 } from "lucide-react";
 
 const navItems = [
@@ -82,7 +88,158 @@ const productRows = [
   ["WFX-3156", "Knit Blend", "Navy", "SS26"],
 ];
 
+function LoginScreen({ onLogin }) {
+  const [form, setForm] = useState({
+    email: "merchandiser@wfx.com",
+    password: "demo1234",
+  });
+  const [error, setError] = useState("");
+
+  function handleSubmit(event) {
+    event.preventDefault();
+
+    if (!form.email.includes("@") || form.password.length < 6) {
+      setError("Use a valid work email and a password with at least 6 characters.");
+      return;
+    }
+
+    setError("");
+    onLogin({
+      email: form.email,
+      name: form.email.split("@")[0],
+      role: "Merchandiser",
+    });
+  }
+
+  return (
+    <main className="min-h-screen bg-[#eef3f4] text-ink">
+      <div className="grid min-h-screen lg:grid-cols-[minmax(0,1fr)_480px]">
+        <section className="relative hidden overflow-hidden bg-ink p-10 text-white lg:flex lg:flex-col lg:justify-between">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_25%_20%,rgba(31,95,139,0.45),transparent_32%),radial-gradient(circle_at_80%_0%,rgba(217,111,93,0.28),transparent_30%)]" />
+          <div className="relative">
+            <div className="flex items-center gap-3">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white text-ink">
+                <Sparkles aria-hidden="true" size={24} />
+              </div>
+              <div>
+                <p className="font-semibold">WFX AI ERP</p>
+                <p className="text-sm text-slate-300">Secure fashion operations workspace</p>
+              </div>
+            </div>
+            <motion.div
+              animate={{ opacity: 1, y: 0 }}
+              className="mt-20 max-w-2xl"
+              initial={{ opacity: 0, y: 18 }}
+              transition={{ duration: 0.45 }}
+            >
+              <p className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-sm text-slate-200">
+                <ShieldCheck aria-hidden="true" size={15} />
+                Protected ERP access
+              </p>
+              <h1 className="mt-5 text-5xl font-semibold leading-tight">
+                Sign in before exploring buyers, orders, invoices, and product intelligence.
+              </h1>
+              <p className="mt-5 text-base leading-7 text-slate-300">
+                The MVP starts with a local login gate. Backend token auth and Supabase
+                role-based access will be connected with the API security milestone.
+              </p>
+            </motion.div>
+          </div>
+
+          <div className="relative grid gap-3 md:grid-cols-3">
+            {["AI SQL", "Typesense", "Image search"].map((item) => (
+              <div className="rounded-xl border border-white/10 bg-white/8 p-4" key={item}>
+                <p className="text-sm font-semibold">{item}</p>
+                <p className="mt-2 text-xs leading-5 text-slate-300">Access controlled workspace</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section className="flex items-center justify-center px-5 py-10">
+          <motion.form
+            animate={{ opacity: 1, y: 0 }}
+            className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
+            initial={{ opacity: 0, y: 16 }}
+            onSubmit={handleSubmit}
+            transition={{ duration: 0.35 }}
+          >
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-ink text-white">
+              <LockKeyhole aria-hidden="true" size={22} />
+            </div>
+            <h2 className="mt-6 text-3xl font-semibold text-ink">Welcome back</h2>
+            <p className="mt-2 text-sm leading-6 text-slate-600">
+              Sign in to access the WFX AI ERP command center.
+            </p>
+
+            <label className="mt-7 block text-sm font-semibold text-ink" htmlFor="email">
+              Work email
+            </label>
+            <div className="mt-2 flex items-center gap-3 rounded-xl border border-slate-200 px-3 py-3 focus-within:border-denim focus-within:ring-2 focus-within:ring-denim/15">
+              <Mail aria-hidden="true" className="text-slate-400" size={18} />
+              <input
+                className="w-full border-0 bg-transparent text-sm text-ink outline-none"
+                id="email"
+                onChange={(event) => setForm({ ...form, email: event.target.value })}
+                type="email"
+                value={form.email}
+              />
+            </div>
+
+            <label className="mt-5 block text-sm font-semibold text-ink" htmlFor="password">
+              Password
+            </label>
+            <div className="mt-2 flex items-center gap-3 rounded-xl border border-slate-200 px-3 py-3 focus-within:border-denim focus-within:ring-2 focus-within:ring-denim/15">
+              <LockKeyhole aria-hidden="true" className="text-slate-400" size={18} />
+              <input
+                className="w-full border-0 bg-transparent text-sm text-ink outline-none"
+                id="password"
+                onChange={(event) => setForm({ ...form, password: event.target.value })}
+                type="password"
+                value={form.password}
+              />
+            </div>
+
+            {error ? (
+              <p className="mt-4 rounded-lg bg-coral/10 px-3 py-2 text-sm text-coral">{error}</p>
+            ) : null}
+
+            <button className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-ink px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800">
+              <ShieldCheck aria-hidden="true" size={18} />
+              Sign in securely
+            </button>
+
+            <p className="mt-4 text-xs leading-5 text-slate-500">
+              Demo credentials are prefilled for evaluation. This is a local MVP gate,
+              not a replacement for backend authentication.
+            </p>
+          </motion.form>
+        </section>
+      </div>
+    </main>
+  );
+}
+
 function App() {
+  const [user, setUser] = useState(() => {
+    const savedUser = sessionStorage.getItem("wfx-demo-user");
+    return savedUser ? JSON.parse(savedUser) : null;
+  });
+
+  function handleLogin(nextUser) {
+    sessionStorage.setItem("wfx-demo-user", JSON.stringify(nextUser));
+    setUser(nextUser);
+  }
+
+  function handleLogout() {
+    sessionStorage.removeItem("wfx-demo-user");
+    setUser(null);
+  }
+
+  if (!user) {
+    return <LoginScreen onLogin={handleLogin} />;
+  }
+
   return (
     <main className="min-h-screen bg-[#eef3f4] text-ink">
       <div className="flex min-h-screen">
@@ -119,6 +276,15 @@ function App() {
           </nav>
 
           <div className="mt-auto rounded-lg border border-slate-200 bg-mist p-4">
+            <div className="mb-4 flex items-center gap-3 border-b border-slate-200 pb-4">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white text-denim">
+                <UserRound aria-hidden="true" size={20} />
+              </div>
+              <div className="min-w-0">
+                <p className="truncate text-sm font-semibold text-ink">{user.name}</p>
+                <p className="text-xs text-slate-500">{user.role}</p>
+              </div>
+            </div>
             <div className="flex items-center gap-2 text-sm font-semibold text-ink">
               <Clock3 aria-hidden="true" size={16} />
               MVP build track
@@ -143,6 +309,14 @@ function App() {
               <button className="inline-flex w-fit items-center gap-2 rounded-lg bg-ink px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800">
                 <Sparkles aria-hidden="true" size={17} />
                 Launch assistant
+              </button>
+              <button
+                className="inline-flex w-fit items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-100"
+                onClick={handleLogout}
+                type="button"
+              >
+                <LogOut aria-hidden="true" size={17} />
+                Sign out
               </button>
             </div>
           </header>

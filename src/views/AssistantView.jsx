@@ -1,10 +1,13 @@
 import { motion } from "framer-motion";
 import {
   Bot,
+  CheckCircle2,
   ChevronDown,
   ChevronUp,
+  Circle,
   Database,
   LoaderCircle,
+  Rows3,
   SendHorizontal,
   Sparkles,
 } from "lucide-react";
@@ -19,16 +22,17 @@ const AGENT_STEPS = [
   "Running query...",
   "Summarizing results...",
 ];
+const RESULT_PREVIEW_LIMIT = 8;
 
 function ResultsTable({ rows }) {
   if (!rows?.length) {
-    return <EmptyState message="The query ran successfully but returned no rows." />;
+    return <EmptyState className="py-6" message="The query ran successfully but returned no rows." />;
   }
 
   const columns = Object.keys(rows[0]);
 
   return (
-    <div className="overflow-x-auto rounded-2xl border border-slate-200">
+    <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white">
       <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
         <thead className="bg-[#f8faf9]">
           <tr>
@@ -40,7 +44,7 @@ function ResultsTable({ rows }) {
           </tr>
         </thead>
         <tbody className="divide-y divide-slate-100 bg-white">
-          {rows.slice(0, 20).map((row, index) => (
+          {rows.slice(0, RESULT_PREVIEW_LIMIT).map((row, index) => (
             <tr key={index}>
               {columns.map((column) => (
                 <td className="px-4 py-3 text-slate-700" key={column}>
@@ -51,6 +55,30 @@ function ResultsTable({ rows }) {
           ))}
         </tbody>
       </table>
+    </div>
+  );
+}
+
+function CollapsibleRunSection({ children, defaultOpen = false, icon: Icon, title, value }) {
+  const [open, setOpen] = useState(defaultOpen);
+
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white">
+      <button
+        className="flex w-full items-center justify-between gap-4 px-4 py-3 text-left"
+        onClick={() => setOpen((current) => !current)}
+        type="button"
+      >
+        <span className="inline-flex min-w-0 items-center gap-2 text-xs font-semibold uppercase tracking-wide text-ink">
+          <Icon aria-hidden="true" className="shrink-0" size={14} />
+          <span className="truncate">{title}</span>
+        </span>
+        <span className="inline-flex shrink-0 items-center gap-2 text-xs font-medium text-slate-500">
+          {value}
+          {open ? <ChevronUp aria-hidden="true" size={15} /> : <ChevronDown aria-hidden="true" size={15} />}
+        </span>
+      </button>
+      {open ? <div className="border-t border-slate-200 p-4 pt-3">{children}</div> : null}
     </div>
   );
 }
@@ -68,54 +96,75 @@ function UserBubble({ content }) {
 function StatusBubble({ step }) {
   return (
     <motion.div animate={{ opacity: 1, y: 0 }} className="flex justify-start" initial={{ opacity: 0, y: 8 }}>
-      <div className="inline-flex items-center gap-2 rounded-[24px] border border-slate-200 bg-white px-5 py-4 text-sm text-slate-600 shadow-sm">
-        <LoaderCircle aria-hidden="true" className="animate-spin text-[#4b8b69]" size={16} />
-        <span>{step}</span>
+      <div className="max-w-3xl rounded-[24px] border border-slate-200 bg-white px-5 py-4 text-sm text-slate-600 shadow-sm">
+        <div className="inline-flex items-center gap-2 font-medium text-ink">
+          <LoaderCircle aria-hidden="true" className="animate-spin text-[#4b8b69]" size={16} />
+          <span>{step}</span>
+        </div>
+        <AgentRunSteps activeStep={AGENT_STEPS.indexOf(step)} className="mt-4" />
       </div>
     </motion.div>
   );
 }
 
-function AssistantResultBubble({ message }) {
-  const [showSql, setShowSql] = useState(false);
-  const [showRows, setShowRows] = useState(false);
+function AgentRunSteps({ activeStep = null, className = "" }) {
+  return (
+    <div className={`space-y-2 ${className}`}>
+      {AGENT_STEPS.map((label, index) => {
+        const completed = activeStep === null;
+        const isDone = completed || index < activeStep;
+        const isActive = !completed && index === activeStep;
+        return (
+          <div className="flex items-center gap-2 text-xs text-slate-500" key={label}>
+            {isDone ? (
+              <CheckCircle2 aria-hidden="true" className="text-[#4b8b69]" size={14} />
+            ) : isActive ? (
+              <LoaderCircle aria-hidden="true" className="animate-spin text-[#4b8b69]" size={14} />
+            ) : (
+              <Circle aria-hidden="true" className="text-slate-300" size={14} />
+            )}
+            <span className={isActive ? "font-semibold text-ink" : ""}>{label.replace("...", "")}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
+function AssistantResultBubble({ message }) {
   return (
     <motion.div animate={{ opacity: 1, y: 0 }} className="flex justify-start" initial={{ opacity: 0, y: 8 }}>
       <div className="max-w-3xl rounded-[24px] border border-slate-200 bg-white px-5 py-4 text-sm leading-7 text-slate-700 shadow-sm">
-        <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-[#f4efe8] px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-[#102227]">
-          <Sparkles aria-hidden="true" size={12} />
-          ERP insight
+        <div className="rounded-2xl border border-slate-200 bg-[#f8faf9] p-4">
+          <p className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-ink">
+            <Sparkles aria-hidden="true" size={13} />
+            Agent run
+          </p>
+          <AgentRunSteps className="mt-3" />
         </div>
-        <p>{message.summary}</p>
 
         <div className="mt-4 space-y-3">
-          <button
-            className="flex w-full items-center justify-between rounded-2xl border border-slate-200 bg-[#f8faf9] px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-ink"
-            onClick={() => setShowSql((current) => !current)}
-            type="button"
-          >
-            <span className="inline-flex items-center gap-2">
-              <Database aria-hidden="true" size={14} />
-              Generated SQL
-            </span>
-            {showSql ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-          </button>
-          {showSql ? (
+          <CollapsibleRunSection icon={Database} title="Generated SQL" value="View query">
             <pre className="overflow-x-auto rounded-2xl bg-[#102227] p-4 text-xs leading-6 text-[#d7ece2]">
               {message.sql}
             </pre>
-          ) : null}
+          </CollapsibleRunSection>
 
-          <button
-            className="flex w-full items-center justify-between rounded-2xl border border-slate-200 bg-[#f8faf9] px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-ink"
-            onClick={() => setShowRows((current) => !current)}
-            type="button"
+          <CollapsibleRunSection
+            icon={Rows3}
+            title="Result preview"
+            value={`${Math.min(message.rows?.length || 0, RESULT_PREVIEW_LIMIT)} of ${message.row_count} rows`}
           >
-            Result preview ({message.row_count} rows)
-            {showRows ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-          </button>
-          {showRows ? <ResultsTable rows={message.rows} /> : null}
+            <ResultsTable rows={message.rows} />
+          </CollapsibleRunSection>
+        </div>
+
+        <div className="mt-4 rounded-2xl bg-[#f4efe8] px-4 py-4">
+          <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-white px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-[#102227]">
+            <Sparkles aria-hidden="true" size={12} />
+            ERP insight
+          </div>
+          <p>{message.summary}</p>
         </div>
       </div>
     </motion.div>
@@ -182,21 +231,26 @@ export default function AssistantView({ getApiErrorMessage, notifyError }) {
   }
 
   return (
-    <div className="space-y-6">
-      <SurfaceCard className="p-5 md:p-6">
-        <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-[#102227] text-white">
-          <Bot aria-hidden="true" size={20} />
+    <div className="space-y-5">
+      <SurfaceCard className="p-5">
+        <div className="flex items-center gap-4">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#102227] text-white">
+            <Bot aria-hidden="true" size={19} />
+          </div>
+          <SectionTitle
+            subtitle="Ask about buyers, suppliers, products, orders, and invoices."
+            title="Natural-language ERP assistant"
+          />
         </div>
-        <SectionTitle
-          subtitle="Ask anything about buyers, suppliers, products, orders, and invoices."
-          title="Natural-language ERP assistant"
-        />
       </SurfaceCard>
 
-      <SurfaceCard className="flex min-h-[520px] flex-col p-5 md:p-6">
-        <div className="flex-1 space-y-4 overflow-y-auto pr-1">
+      <SurfaceCard className="flex min-h-[420px] flex-col p-5 md:p-6">
+        <div className="max-h-[56vh] min-h-[260px] flex-1 space-y-4 overflow-y-auto pr-1">
           {messages.length === 0 && !loading ? (
-            <EmptyState message='Try "Which buyer generated the highest revenue?" or "Show pending invoices above 71000."' />
+            <EmptyState
+              className="py-8"
+              message='Try "Which buyer generated the highest revenue?" or "Show pending invoices above 71000."'
+            />
           ) : null}
 
           {messages.map((message, index) => {
@@ -215,7 +269,7 @@ export default function AssistantView({ getApiErrorMessage, notifyError }) {
 
         <ErrorBanner message={error} />
 
-        <form className="mt-6 flex flex-col gap-3 border-t border-slate-200 pt-5 sm:flex-row" onSubmit={handleSubmit}>
+        <form className="mt-5 flex flex-col gap-3 border-t border-slate-200 pt-5 sm:flex-row" onSubmit={handleSubmit}>
           <label className="sr-only" htmlFor="assistant-question">
             Ask an ERP question
           </label>

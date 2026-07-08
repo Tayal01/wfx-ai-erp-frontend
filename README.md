@@ -26,7 +26,7 @@ npm run dev
 Default local URL:
 
 ```txt
-http://localhost:5173
+http://localhost:5174
 ```
 
 ## Current Status

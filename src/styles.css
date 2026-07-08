@@ -13,3 +13,8 @@ body {
   margin: 0;
   background: #f4efe8;
 }
+
+.wfx-toast {
+  font-size: 0.95rem;
+  line-height: 1.45;
+}

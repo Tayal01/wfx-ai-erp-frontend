@@ -31,5 +31,5 @@ http://localhost:5173
 
 ## Current Status
 
-The frontend is scaffolded with Vite, React, Tailwind CSS configuration, and a
-starter application shell. Feature pages will be added in later milestones.
+The frontend includes login, dashboard, product catalog, AI assistant chat,
+Typesense product discovery, and image-based visual search.

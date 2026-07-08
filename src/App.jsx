@@ -1,5 +1,5 @@
 import { startTransition, useDeferredValue, useEffect, useRef, useState } from "react";
-import { BarChart3, Bot, LogOut, PackageSearch, ShieldCheck, Sparkles, UserRound } from "lucide-react";
+import { BarChart3, Bot, ImageUp, LogOut, PackageSearch, Search, ShieldCheck, Sparkles, UserRound } from "lucide-react";
 import toast from "react-hot-toast";
 
 import {
@@ -14,15 +14,19 @@ import {
   persistSession,
 } from "./api.js";
 import { ErrorBanner } from "./components/ui.jsx";
-import AssistantPlaceholder from "./views/AssistantPlaceholder.jsx";
+import AssistantView from "./views/AssistantView.jsx";
 import DashboardView from "./views/DashboardView.jsx";
+import ImageSearchView from "./views/ImageSearchView.jsx";
 import LoginScreen from "./views/LoginScreen.jsx";
+import ProductSearchView from "./views/ProductSearchView.jsx";
 import ProductsView from "./views/ProductsView.jsx";
 
 const navItems = [
   { id: "dashboard", label: "Dashboard", icon: BarChart3 },
   { id: "products", label: "Products", icon: PackageSearch },
+  { id: "discovery", label: "Discovery", icon: Search },
   { id: "assistant", label: "AI Assistant", icon: Bot },
+  { id: "image-search", label: "Image Search", icon: ImageUp },
 ];
 
 const defaultFilters = {
@@ -185,9 +189,17 @@ function AppHeader({ activeView, onLogout }) {
       eyebrow: "Catalog workspace",
       title: "Products",
     },
+    discovery: {
+      eyebrow: "Typesense search",
+      title: "Product Discovery",
+    },
     assistant: {
       eyebrow: "Natural language layer",
       title: "AI Assistant",
+    },
+    "image-search": {
+      eyebrow: "Visual similarity",
+      title: "Image Search",
     },
   };
 
@@ -515,7 +527,26 @@ function App() {
               />
             ) : null}
 
-            {activeView === "assistant" ? <AssistantPlaceholder /> : null}
+            {activeView === "assistant" ? (
+              <AssistantView getApiErrorMessage={getApiErrorMessage} notifyError={notifyError} />
+            ) : null}
+
+            {activeView === "discovery" ? (
+              <ProductSearchView
+                formatCurrency={formatCurrency}
+                getApiErrorMessage={getApiErrorMessage}
+                notifyError={notifyError}
+              />
+            ) : null}
+
+            {activeView === "image-search" ? (
+              <ImageSearchView
+                formatCurrency={formatCurrency}
+                getApiErrorMessage={getApiErrorMessage}
+                notifyError={notifyError}
+                notifySuccess={notifySuccess}
+              />
+            ) : null}
           </div>
         </section>
       </div>

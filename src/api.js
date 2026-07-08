@@ -60,3 +60,36 @@ export async function getProductDetail(styleNumber) {
   const response = await api.get(`/api/products/${styleNumber}`);
   return response.data;
 }
+
+export async function askAssistant(question) {
+  const response = await api.post("/api/ai/chat", { question });
+  return response.data;
+}
+
+export async function searchProducts(params) {
+  const response = await api.post("/api/search/products", params);
+  return response.data;
+}
+
+export async function searchByImage({ file, imageUrl, limit = 12 }) {
+  if (file) {
+    const formData = new FormData();
+    formData.append("image", file);
+    formData.append("limit", String(limit));
+    const response = await api.post("/api/search/image", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+    return response.data;
+  }
+
+  const response = await api.post("/api/search/image-url", {
+    image_url: imageUrl,
+    limit,
+  });
+  return response.data;
+}
+
+export async function reindexProducts(limit = 1500) {
+  const response = await api.post("/api/search/reindex", { limit, include_embeddings: true });
+  return response.data;
+}

@@ -49,6 +49,39 @@ function ProductThumbnail({ product }) {
   );
 }
 
+function ProductHeroImage({ product }) {
+  const [failed, setFailed] = useState(false);
+
+  if (product.image_url && !failed) {
+    return (
+      <div className="relative min-h-[260px] overflow-hidden rounded-[24px] bg-[#eef3f2]">
+        <img
+          alt={product.style_name}
+          className="h-full min-h-[260px] w-full object-cover"
+          loading="lazy"
+          onError={() => setFailed(true)}
+          src={product.image_url}
+        />
+        <div className="absolute left-4 top-4 rounded-full bg-white/90 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-ink shadow-sm">
+          {product.season}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex min-h-[260px] items-center justify-center rounded-[24px] border border-slate-200 bg-[#eef3f2] text-[#102227]">
+      <div className="text-center">
+        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-white shadow-sm">
+          <ImageIcon aria-hidden="true" size={24} />
+        </div>
+        <p className="mt-3 text-sm font-semibold text-ink">{product.category}</p>
+        <p className="mt-1 text-xs text-slate-500">Product image unavailable</p>
+      </div>
+    </div>
+  );
+}
+
 function ProductListSkeleton() {
   return (
     <div className="mt-5 grid gap-4 lg:grid-cols-2">
@@ -138,23 +171,30 @@ function ProductDetailModal({ open, onClose, productDetail, loading, error, form
 
       {product ? (
         <div className="space-y-5">
-          <div className="overflow-hidden rounded-[28px] bg-[linear-gradient(135deg,#102227_0%,#16333b_52%,#214751_100%)] p-6 text-white">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <p className="text-xs uppercase tracking-[0.18em] text-slate-300">{product.style_number}</p>
-              <span className="rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs font-semibold text-slate-100">
-                {product.season}
-              </span>
-            </div>
-            <h4 className="mt-4 text-3xl font-semibold">{product.style_name}</h4>
-            <p className="mt-3 text-sm leading-6 text-slate-300">
-              {product.category} · {product.fabric} · {product.color}
-            </p>
-            <div className="mt-5 flex flex-wrap gap-2">
-              {[product.print, product.brand].map((chip) => (
-                <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-medium text-slate-100" key={chip}>
-                  {chip}
-                </span>
-              ))}
+          <div className="grid gap-5 rounded-[28px] border border-slate-200 bg-white p-4 shadow-[0_12px_32px_rgba(16,34,39,0.05)] lg:grid-cols-[minmax(260px,0.9fr)_minmax(0,1.1fr)]">
+            <ProductHeroImage product={product} />
+
+            <div className="flex min-w-0 flex-col justify-between rounded-[24px] bg-[#102227] p-6 text-white">
+              <div>
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <p className="text-xs uppercase tracking-[0.18em] text-slate-300">{product.style_number}</p>
+                  <span className="rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs font-semibold text-slate-100">
+                    {product.season}
+                  </span>
+                </div>
+                <h4 className="mt-4 text-3xl font-semibold">{product.style_name}</h4>
+                <p className="mt-3 text-sm leading-6 text-slate-300">
+                  {product.category} · {product.fabric} · {product.color}
+                </p>
+              </div>
+
+              <div className="mt-6 flex flex-wrap gap-2">
+                {[product.print, product.brand].filter(Boolean).map((chip) => (
+                  <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-medium text-slate-100" key={chip}>
+                    {chip}
+                  </span>
+                ))}
+              </div>
             </div>
           </div>
 
@@ -268,13 +308,14 @@ export default function ProductsView({
 
   const sortOptions = [
     { value: "style_name", label: "Name" },
-    { value: "style_number", label: "Style number" },
-    { value: "selling_price", label: "Selling price" },
+    { value: "style_number", label: "Style #" },
+    { value: "selling_price", label: "Price" },
     { value: "cost", label: "Cost" },
     { value: "gsm", label: "GSM" },
     { value: "season", label: "Season" },
   ];
   const SortIcon = sortOrder === "asc" ? ArrowUpAZ : ArrowDownAZ;
+  const sortDirectionLabel = sortOrder === "asc" ? "Ascending" : "Descending";
 
   return (
     <>
@@ -352,29 +393,35 @@ export default function ProductsView({
                 </div>
               }
             />
-            <div className="flex flex-wrap items-center gap-2">
-              <label className="sr-only" htmlFor="product-sort-by">
-                Sort products by
-              </label>
-              <select
-                className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-ink outline-none transition focus:border-[#4b8b69]"
-                id="product-sort-by"
-                onChange={(event) => onSortChange(event.target.value, sortOrder)}
-                value={sortBy}
-              >
-                {sortOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    Sort by {option.label}
-                  </option>
-                ))}
-              </select>
+            <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-slate-200 bg-[#f8faf9] p-1">
+              <span className="px-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Sort</span>
+              <div className="flex flex-wrap items-center gap-1">
+                {sortOptions.map((option) => {
+                  const active = sortBy === option.value;
+                  return (
+                    <button
+                      className={`rounded-xl px-3 py-2 text-sm font-semibold transition ${
+                        active
+                          ? "bg-white text-ink shadow-[0_6px_18px_rgba(16,34,39,0.08)]"
+                          : "text-slate-600 hover:bg-white/70 hover:text-ink"
+                      }`}
+                      key={option.value}
+                      onClick={() => onSortChange(option.value, sortOrder)}
+                      type="button"
+                    >
+                      {option.label}
+                    </button>
+                  );
+                })}
+              </div>
               <button
-                className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                aria-label={`Sort direction: ${sortDirectionLabel}`}
+                className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 shadow-[0_6px_18px_rgba(16,34,39,0.06)] transition hover:bg-slate-50"
                 onClick={() => onSortChange(sortBy, sortOrder === "asc" ? "desc" : "asc")}
+                title={`Sort direction: ${sortDirectionLabel}`}
                 type="button"
               >
                 <SortIcon aria-hidden="true" size={16} />
-                {sortOrder === "asc" ? "Ascending" : "Descending"}
               </button>
             </div>
           </div>

@@ -226,11 +226,11 @@ function AppHeader({ activeView, onLogout, onOpenMenu }) {
   const current = titleMap[activeView];
 
   return (
-    <header className="border-b border-[#d8dfdd] bg-white/70 px-4 py-4 backdrop-blur md:px-8">
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+    <header className="border-b border-[#d8dfdd] bg-white/90 px-4 py-4 md:px-8 lg:bg-white/70 lg:backdrop-blur">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-start gap-3">
           <button
-            className="mt-1 flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-700 lg:hidden"
+            className="mt-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-700 lg:hidden"
             onClick={onOpenMenu}
             type="button"
           >
@@ -241,13 +241,13 @@ function AppHeader({ activeView, onLogout, onOpenMenu }) {
             <h1 className="mt-1 text-2xl font-semibold text-ink md:text-3xl">{current.title}</h1>
           </div>
         </div>
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+          <div className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-700 sm:px-4 sm:py-3">
             <ShieldCheck aria-hidden="true" size={16} className="text-[#4b8b69]" />
             Secure session
           </div>
           <button
-            className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-100"
+            className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-100 sm:px-4 sm:py-3"
             onClick={onLogout}
             type="button"
           >
@@ -522,7 +522,7 @@ function App() {
         <div className="fixed inset-0 z-50 flex lg:hidden">
           <button
             aria-label="Close navigation"
-            className="absolute inset-0 bg-[#102227]/45 backdrop-blur-sm"
+            className="absolute inset-0 bg-[#102227]/35"
             onClick={() => setMobileNavOpen(false)}
             type="button"
           />
@@ -546,7 +546,7 @@ function App() {
             onOpenMenu={() => setMobileNavOpen(true)}
           />
 
-          <div className="flex-1 overflow-y-auto px-4 py-6 md:px-8">
+          <div className="flex-1 overflow-y-auto px-3 py-5 sm:px-4 sm:py-6 md:px-8">
             {activeView === "dashboard" ? (
               <div className="space-y-4">
                 <ErrorBanner

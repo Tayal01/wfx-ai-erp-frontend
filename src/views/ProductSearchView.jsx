@@ -47,6 +47,70 @@ const filterFields = [
   { key: "gsm_max", label: "GSM max", placeholder: "320", icon: Ruler },
 ];
 
+function getMatchPercent(item) {
+  const value = item.match_percent ?? item.similarity_percent;
+  const numericValue = Number(value);
+
+  if (!Number.isFinite(numericValue)) {
+    return null;
+  }
+
+  return Math.max(0, Math.min(100, Math.round(numericValue)));
+}
+
+function MatchBadge({ item }) {
+  const matchPercent = getMatchPercent(item);
+
+  if (matchPercent === null) {
+    return null;
+  }
+
+  return (
+    <div className="inline-flex w-fit max-w-full items-center gap-2 rounded-full border border-[#d7e8df] bg-[#f7fbf8] px-3 py-1.5 text-xs shadow-[0_6px_16px_rgba(16,34,39,0.04)]">
+      <span className="font-semibold text-[#2f6f4e]">{matchPercent}% match</span>
+      <span className="h-1 w-14 overflow-hidden rounded-full bg-[#dfeee6]" aria-hidden="true">
+        <span className="block h-full rounded-full bg-[#4b8b69]" style={{ width: `${matchPercent}%` }} />
+      </span>
+      <span className="hidden text-slate-500 sm:inline">
+        {item.match_basis === "visual similarity" ? "Visual" : "Relevant"}
+      </span>
+    </div>
+  );
+}
+
+function PriceSummary({ item, formatCurrency }) {
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white px-3 py-2 text-left shadow-[0_6px_16px_rgba(16,34,39,0.03)] sm:min-w-[128px] lg:text-right">
+      <p className="text-xs uppercase tracking-wide text-slate-500">Selling price</p>
+      <p className="text-lg font-semibold text-[#d9773f]">{formatCurrency(item.selling_price)}</p>
+    </div>
+  );
+}
+
+function ProductAttribute({ label, value }) {
+  return (
+    <div className="rounded-2xl bg-[#f8faf9] px-3 py-2">
+      <p className="text-[11px] uppercase tracking-wide text-slate-500">{label}</p>
+      <p className="mt-1 font-medium text-ink">{value}</p>
+    </div>
+  );
+}
+
+function SearchResultImage({ item }) {
+  return (
+    <div className="relative flex aspect-[4/3] w-full shrink-0 items-center justify-center overflow-hidden bg-[#f4efe8] md:aspect-auto md:min-h-44">
+      {item.image_url ? (
+        <img alt={item.style_name} className="h-full w-full object-cover" loading="lazy" src={item.image_url} />
+      ) : (
+        <ImageIcon aria-hidden="true" className="text-[#102227]" size={28} />
+      )}
+      <div className="absolute left-3 top-3 md:hidden">
+        <MatchBadge item={item} />
+      </div>
+    </div>
+  );
+}
+
 function SearchResultCard({ item, formatCurrency }) {
   return (
     <motion.article
@@ -54,44 +118,30 @@ function SearchResultCard({ item, formatCurrency }) {
       className="overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-[0_10px_30px_rgba(16,34,39,0.04)] transition hover:-translate-y-0.5 hover:border-slate-300"
       initial={false}
     >
-      <div className="flex flex-col sm:flex-row">
-        <div className="flex h-44 w-full shrink-0 items-center justify-center overflow-hidden bg-[#f4efe8] sm:h-auto sm:w-40">
-          {item.image_url ? (
-            <img alt={item.style_name} className="h-full w-full object-cover" loading="lazy" src={item.image_url} />
-          ) : (
-            <ImageIcon aria-hidden="true" className="text-[#102227]" size={28} />
-          )}
-        </div>
-        <div className="min-w-0 flex-1 p-5">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-            <div>
-              <h3 className="text-lg font-semibold text-ink">{item.style_name}</h3>
+      <div className="grid gap-0 md:grid-cols-[180px_minmax(0,1fr)]">
+        <SearchResultImage item={item} />
+        <div className="min-w-0 p-4 sm:p-5">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+            <div className="min-w-0">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <h3 className="text-lg font-semibold text-ink">{item.style_name}</h3>
+                <div className="hidden md:block">
+                  <MatchBadge item={item} />
+                </div>
+              </div>
               <p className="text-sm text-slate-500">
                 {item.style_number} · {item.category}
               </p>
             </div>
-            <div className="text-left sm:text-right">
-              <p className="text-xs uppercase tracking-wide text-slate-500">Selling price</p>
-              <p className="text-lg font-semibold text-[#d9773f]">{formatCurrency(item.selling_price)}</p>
+            <div className="sm:w-fit">
+              <PriceSummary formatCurrency={formatCurrency} item={item} />
             </div>
           </div>
-          <div className="mt-4 grid gap-2 text-sm text-slate-600 sm:grid-cols-2 lg:grid-cols-4">
-            <div className="rounded-2xl bg-[#f8faf9] px-3 py-2">
-              <p className="text-[11px] uppercase tracking-wide text-slate-500">Color</p>
-              <p className="mt-1 font-medium text-ink">{item.color}</p>
-            </div>
-            <div className="rounded-2xl bg-[#f8faf9] px-3 py-2">
-              <p className="text-[11px] uppercase tracking-wide text-slate-500">Fabric</p>
-              <p className="mt-1 font-medium text-ink">{item.fabric}</p>
-            </div>
-            <div className="rounded-2xl bg-[#f8faf9] px-3 py-2">
-              <p className="text-[11px] uppercase tracking-wide text-slate-500">GSM</p>
-              <p className="mt-1 font-medium text-ink">{item.gsm}</p>
-            </div>
-            <div className="rounded-2xl bg-[#f8faf9] px-3 py-2">
-              <p className="text-[11px] uppercase tracking-wide text-slate-500">Print</p>
-              <p className="mt-1 font-medium text-ink">{item.print}</p>
-            </div>
+          <div className="mt-4 grid gap-2 text-sm text-slate-600 sm:grid-cols-2 xl:grid-cols-4">
+            <ProductAttribute label="Color" value={item.color} />
+            <ProductAttribute label="Fabric" value={item.fabric} />
+            <ProductAttribute label="GSM" value={item.gsm} />
+            <ProductAttribute label="Print" value={item.print} />
           </div>
         </div>
       </div>
@@ -159,9 +209,9 @@ export default function ProductSearchView({
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5 sm:space-y-6">
       <SurfaceCard className="overflow-hidden p-0">
-        <div className="bg-[linear-gradient(135deg,#102227_0%,#16333b_52%,#214751_100%)] px-5 py-6 text-white md:px-6">
+        <div className="bg-[linear-gradient(135deg,#102227_0%,#16333b_52%,#214751_100%)] px-4 py-5 text-white sm:px-5 sm:py-6 md:px-6">
           <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
             <div>
               <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-slate-200">
@@ -173,7 +223,7 @@ export default function ProductSearchView({
                 Search style names, fabrics, colors, suppliers, buyers, GSM, and print attributes.
               </p>
             </div>
-            <div className="rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-sm text-slate-200">
+            <div className="w-fit rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-sm text-slate-200">
               {activeFilterCount} active filters
             </div>
           </div>
@@ -193,7 +243,7 @@ export default function ProductSearchView({
           </div>
         </div>
 
-        <div className="border-t border-slate-200 bg-[#fbfcfb] px-5 py-5 md:px-6">
+        <div className="border-t border-slate-200 bg-[#fbfcfb] px-4 py-5 sm:px-5 md:px-6">
           <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-sm font-medium text-slate-600">Refine results with apparel-specific filters.</p>
             <button

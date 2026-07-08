@@ -1,9 +1,24 @@
 import { motion } from "framer-motion";
-import { Bot, ChevronDown, ChevronUp, LoaderCircle, SendHorizontal, Sparkles } from "lucide-react";
-import { useState } from "react";
+import {
+  Bot,
+  ChevronDown,
+  ChevronUp,
+  Database,
+  LoaderCircle,
+  SendHorizontal,
+  Sparkles,
+} from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 
 import { askAssistant } from "../api.js";
 import { EmptyState, ErrorBanner, SectionTitle, SurfaceCard } from "../components/ui.jsx";
+
+const AGENT_STEPS = [
+  "Understanding your question...",
+  "Generating SQL...",
+  "Running query...",
+  "Summarizing results...",
+];
 
 function ResultsTable({ rows }) {
   if (!rows?.length) {
@@ -40,23 +55,68 @@ function ResultsTable({ rows }) {
   );
 }
 
-function MessageBubble({ message }) {
-  const isUser = message.role === "user";
+function UserBubble({ content }) {
+  return (
+    <motion.div animate={{ opacity: 1, y: 0 }} className="flex justify-end" initial={{ opacity: 0, y: 8 }}>
+      <div className="max-w-3xl rounded-[24px] bg-[#102227] px-5 py-4 text-sm leading-7 text-white shadow-sm">
+        {content}
+      </div>
+    </motion.div>
+  );
+}
+
+function StatusBubble({ step }) {
+  return (
+    <motion.div animate={{ opacity: 1, y: 0 }} className="flex justify-start" initial={{ opacity: 0, y: 8 }}>
+      <div className="inline-flex items-center gap-2 rounded-[24px] border border-slate-200 bg-white px-5 py-4 text-sm text-slate-600 shadow-sm">
+        <LoaderCircle aria-hidden="true" className="animate-spin text-[#4b8b69]" size={16} />
+        <span>{step}</span>
+      </div>
+    </motion.div>
+  );
+}
+
+function AssistantResultBubble({ message }) {
+  const [showSql, setShowSql] = useState(false);
+  const [showRows, setShowRows] = useState(false);
 
   return (
-    <motion.div
-      animate={{ opacity: 1, y: 0 }}
-      className={`flex ${isUser ? "justify-end" : "justify-start"}`}
-      initial={{ opacity: 0, y: 8 }}
-    >
-      <div
-        className={`max-w-3xl rounded-[24px] px-5 py-4 text-sm leading-7 shadow-sm ${
-          isUser
-            ? "bg-[#102227] text-white"
-            : "border border-slate-200 bg-white text-slate-700"
-        }`}
-      >
-        {message.content}
+    <motion.div animate={{ opacity: 1, y: 0 }} className="flex justify-start" initial={{ opacity: 0, y: 8 }}>
+      <div className="max-w-3xl rounded-[24px] border border-slate-200 bg-white px-5 py-4 text-sm leading-7 text-slate-700 shadow-sm">
+        <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-[#f4efe8] px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-[#102227]">
+          <Sparkles aria-hidden="true" size={12} />
+          ERP insight
+        </div>
+        <p>{message.summary}</p>
+
+        <div className="mt-4 space-y-3">
+          <button
+            className="flex w-full items-center justify-between rounded-2xl border border-slate-200 bg-[#f8faf9] px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-ink"
+            onClick={() => setShowSql((current) => !current)}
+            type="button"
+          >
+            <span className="inline-flex items-center gap-2">
+              <Database aria-hidden="true" size={14} />
+              Generated SQL
+            </span>
+            {showSql ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+          </button>
+          {showSql ? (
+            <pre className="overflow-x-auto rounded-2xl bg-[#102227] p-4 text-xs leading-6 text-[#d7ece2]">
+              {message.sql}
+            </pre>
+          ) : null}
+
+          <button
+            className="flex w-full items-center justify-between rounded-2xl border border-slate-200 bg-[#f8faf9] px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-ink"
+            onClick={() => setShowRows((current) => !current)}
+            type="button"
+          >
+            Result preview ({message.row_count} rows)
+            {showRows ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+          </button>
+          {showRows ? <ResultsTable rows={message.rows} /> : null}
+        </div>
       </div>
     </motion.div>
   );
@@ -67,9 +127,25 @@ export default function AssistantView({ getApiErrorMessage, notifyError }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [messages, setMessages] = useState([]);
-  const [latestResult, setLatestResult] = useState(null);
-  const [showSql, setShowSql] = useState(false);
-  const [showRows, setShowRows] = useState(false);
+  const [activeStep, setActiveStep] = useState(0);
+  const chatEndRef = useRef(null);
+
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, activeStep, loading]);
+
+  useEffect(() => {
+    if (!loading) {
+      return undefined;
+    }
+
+    setActiveStep(0);
+    const intervalId = window.setInterval(() => {
+      setActiveStep((current) => (current < AGENT_STEPS.length - 1 ? current + 1 : current));
+    }, 1200);
+
+    return () => window.clearInterval(intervalId);
+  }, [loading]);
 
   async function handleSubmit(event) {
     event.preventDefault();
@@ -81,23 +157,24 @@ export default function AssistantView({ getApiErrorMessage, notifyError }) {
     setLoading(true);
     setError("");
     setInput("");
-    setMessages((current) => [
-      ...current,
-      { role: "user", content: question },
-    ]);
+    setMessages((current) => [...current, { type: "user", content: question }]);
 
     try {
       const result = await askAssistant(question);
-      setLatestResult(result);
-      setShowSql(false);
-      setShowRows(false);
       setMessages((current) => [
-        ...current,
-        { role: "assistant", content: result.summary },
+        ...current.filter((message) => message.type !== "status"),
+        {
+          type: "assistant",
+          summary: result.summary,
+          sql: result.sql,
+          rows: result.rows,
+          row_count: result.row_count,
+        },
       ]);
     } catch (requestError) {
       const message = getApiErrorMessage(requestError, "Unable to answer that ERP question.");
       setError(message);
+      setMessages((current) => current.filter((item) => item.type !== "status"));
       notifyError("assistant-chat", message);
     } finally {
       setLoading(false);
@@ -106,7 +183,7 @@ export default function AssistantView({ getApiErrorMessage, notifyError }) {
 
   return (
     <div className="space-y-6">
-      <SurfaceCard className="p-6">
+      <SurfaceCard className="p-5 md:p-6">
         <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-[#102227] text-white">
           <Bot aria-hidden="true" size={20} />
         </div>
@@ -114,33 +191,31 @@ export default function AssistantView({ getApiErrorMessage, notifyError }) {
           subtitle="Ask anything about buyers, suppliers, products, orders, and invoices."
           title="Natural-language ERP assistant"
         />
-        <p className="mt-4 max-w-3xl text-sm leading-7 text-slate-600">
-          The assistant generates SQL from your question, runs a read-only query against Supabase,
-          and returns a business summary with optional SQL and result previews.
-        </p>
       </SurfaceCard>
 
-      <SurfaceCard className="p-6">
-        <div className="space-y-4">
-          {messages.length === 0 ? (
-            <EmptyState message="Try a question like “Which buyer generated the highest revenue?” or “Show pending invoices above 71000.”" />
-          ) : (
-            messages.map((message, index) => (
-              <MessageBubble key={`${message.role}-${index}`} message={message} />
-            ))
-          )}
-
-          {loading ? (
-            <div className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600">
-              <LoaderCircle aria-hidden="true" className="animate-spin" size={16} />
-              Generating SQL and summarizing ERP results...
-            </div>
+      <SurfaceCard className="flex min-h-[520px] flex-col p-5 md:p-6">
+        <div className="flex-1 space-y-4 overflow-y-auto pr-1">
+          {messages.length === 0 && !loading ? (
+            <EmptyState message='Try "Which buyer generated the highest revenue?" or "Show pending invoices above 71000."' />
           ) : null}
+
+          {messages.map((message, index) => {
+            if (message.type === "user") {
+              return <UserBubble content={message.content} key={`user-${index}`} />;
+            }
+            if (message.type === "assistant") {
+              return <AssistantResultBubble key={`assistant-${index}`} message={message} />;
+            }
+            return null;
+          })}
+
+          {loading ? <StatusBubble step={AGENT_STEPS[activeStep]} /> : null}
+          <div ref={chatEndRef} />
         </div>
 
         <ErrorBanner message={error} />
 
-        <form className="mt-6 flex flex-col gap-3 sm:flex-row" onSubmit={handleSubmit}>
+        <form className="mt-6 flex flex-col gap-3 border-t border-slate-200 pt-5 sm:flex-row" onSubmit={handleSubmit}>
           <label className="sr-only" htmlFor="assistant-question">
             Ask an ERP question
           </label>
@@ -161,49 +236,6 @@ export default function AssistantView({ getApiErrorMessage, notifyError }) {
           </button>
         </form>
       </SurfaceCard>
-
-      {latestResult ? (
-        <SurfaceCard className="p-6">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-[#f4efe8] px-3 py-1 text-xs font-semibold uppercase tracking-wide text-[#102227]">
-                <Sparkles aria-hidden="true" size={14} />
-                Query insight
-              </div>
-              <SectionTitle
-                subtitle={`${latestResult.row_count} rows returned`}
-                title="Generated SQL and results"
-              />
-            </div>
-          </div>
-
-          <div className="mt-5 space-y-4">
-            <button
-              className="flex w-full items-center justify-between rounded-2xl border border-slate-200 bg-[#f8faf9] px-4 py-3 text-left text-sm font-semibold text-ink"
-              onClick={() => setShowSql((current) => !current)}
-              type="button"
-            >
-              Generated SQL
-              {showSql ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-            </button>
-            {showSql ? (
-              <pre className="overflow-x-auto rounded-2xl bg-[#102227] p-4 text-xs leading-6 text-[#d7ece2]">
-                {latestResult.sql}
-              </pre>
-            ) : null}
-
-            <button
-              className="flex w-full items-center justify-between rounded-2xl border border-slate-200 bg-[#f8faf9] px-4 py-3 text-left text-sm font-semibold text-ink"
-              onClick={() => setShowRows((current) => !current)}
-              type="button"
-            >
-              Result preview
-              {showRows ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-            </button>
-            {showRows ? <ResultsTable rows={latestResult.rows} /> : null}
-          </div>
-        </SurfaceCard>
-      ) : null}
     </div>
   );
 }

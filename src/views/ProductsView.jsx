@@ -1,11 +1,14 @@
 import { motion } from "framer-motion";
 import {
+  ArrowDownAZ,
+  ArrowUpAZ,
   Boxes,
   Building2,
   CalendarDays,
   ChevronLeft,
   ChevronRight,
   Filter,
+  ImageIcon,
   Layers3,
   Palette,
   RotateCcw,
@@ -23,6 +26,28 @@ import {
   SkeletonBlock,
   SurfaceCard,
 } from "../components/ui.jsx";
+
+function ProductThumbnail({ product }) {
+  const [failed, setFailed] = useState(false);
+
+  if (product.image_url && !failed) {
+    return (
+      <img
+        alt={product.style_name}
+        className="h-16 w-16 shrink-0 rounded-2xl object-cover ring-1 ring-slate-200"
+        loading="lazy"
+        onError={() => setFailed(true)}
+        src={product.image_url}
+      />
+    );
+  }
+
+  return (
+    <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-[#102227] text-white ring-1 ring-slate-200">
+      <ImageIcon aria-hidden="true" size={20} />
+    </div>
+  );
+}
 
 function ProductListSkeleton() {
   return (
@@ -211,6 +236,7 @@ export default function ProductsView({
   onFilterChange,
   onResetFilters,
   onPageChange,
+  onSortChange,
   page,
   products,
   productsLoading,
@@ -223,6 +249,8 @@ export default function ProductsView({
   isDetailOpen,
   formatCompactNumber,
   formatCurrency,
+  sortBy,
+  sortOrder,
 }) {
   const [filtersOpen, setFiltersOpen] = useState(false);
   const totalPages = Math.max(1, Math.ceil((products?.total || 0) / (products?.page_size || 8)));
@@ -238,10 +266,20 @@ export default function ProductsView({
     [],
   );
 
+  const sortOptions = [
+    { value: "style_name", label: "Name" },
+    { value: "style_number", label: "Style number" },
+    { value: "selling_price", label: "Selling price" },
+    { value: "cost", label: "Cost" },
+    { value: "gsm", label: "GSM" },
+    { value: "season", label: "Season" },
+  ];
+  const SortIcon = sortOrder === "asc" ? ArrowUpAZ : ArrowDownAZ;
+
   return (
     <>
       <div className="space-y-5">
-        <div className="grid gap-4 lg:grid-cols-[minmax(0,1.6fr)_repeat(3,minmax(0,1fr))]">
+        <div className="grid gap-4 xl:grid-cols-[minmax(0,1.6fr)_repeat(3,minmax(0,1fr))]">
           <SurfaceCard className="p-5">
             <SectionTitle
               subtitle="Focused product search for merchandising teams"
@@ -303,37 +341,61 @@ export default function ProductsView({
         ) : null}
 
         <SurfaceCard className="p-5">
-          <SectionTitle
-            subtitle={productsLoading ? "Refreshing live ERP inventory..." : `${products?.items?.length || 0} styles on this page`}
-            title="Matching styles"
-            action={
-              <div className="inline-flex items-center gap-2 rounded-full bg-[#eef3f2] px-3 py-2 text-sm font-medium text-slate-700">
-                <Tag aria-hidden="true" size={15} />
-                {products?.total || 0} total products
-              </div>
-            }
-          />
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <SectionTitle
+              subtitle={productsLoading ? "Refreshing live ERP inventory..." : `${products?.items?.length || 0} styles on this page`}
+              title="Matching styles"
+              action={
+                <div className="inline-flex items-center gap-2 rounded-full bg-[#eef3f2] px-3 py-2 text-sm font-medium text-slate-700">
+                  <Tag aria-hidden="true" size={15} />
+                  {products?.total || 0} total products
+                </div>
+              }
+            />
+            <div className="flex flex-wrap items-center gap-2">
+              <label className="sr-only" htmlFor="product-sort-by">
+                Sort products by
+              </label>
+              <select
+                className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-ink outline-none transition focus:border-[#4b8b69]"
+                id="product-sort-by"
+                onChange={(event) => onSortChange(event.target.value, sortOrder)}
+                value={sortBy}
+              >
+                {sortOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    Sort by {option.label}
+                  </option>
+                ))}
+              </select>
+              <button
+                className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                onClick={() => onSortChange(sortBy, sortOrder === "asc" ? "desc" : "asc")}
+                type="button"
+              >
+                <SortIcon aria-hidden="true" size={16} />
+                {sortOrder === "asc" ? "Ascending" : "Descending"}
+              </button>
+            </div>
+          </div>
 
           {productsError ? <div className="mt-4"><ErrorBanner message={productsError} /></div> : null}
 
           {productsLoading ? <ProductListSkeleton /> : null}
 
           {!productsLoading ? (
-            <div className="mt-5 grid gap-4 lg:grid-cols-2">
-              {(products?.items || []).map((product, index) => (
+            <div className="mt-5 grid gap-4 md:grid-cols-2 2xl:grid-cols-2">
+              {(products?.items || []).map((product) => (
               <motion.button
                 animate={{ opacity: 1, y: 0 }}
                 className="rounded-[24px] border border-slate-200 bg-white px-5 py-5 text-left shadow-[0_10px_30px_rgba(16,34,39,0.04)] transition hover:-translate-y-0.5 hover:border-slate-300 hover:bg-[#fcfdfc]"
-                initial={{ opacity: 0, y: 8 }}
+                initial={false}
                 key={product.style_number}
                 onClick={() => onProductSelect(product.style_number)}
-                transition={{ delay: index * 0.02, duration: 0.22 }}
                 type="button"
               >
                 <div className="flex items-start gap-4">
-                  <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-[#102227] text-sm font-semibold text-white">
-                    {product.category.slice(0, 2).toUpperCase()}
-                  </div>
+                  <ProductThumbnail product={product} />
 
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">

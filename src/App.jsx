@@ -1,5 +1,5 @@
 import { startTransition, useDeferredValue, useEffect, useRef, useState } from "react";
-import { BarChart3, Bot, ImageUp, LogOut, PackageSearch, Search, ShieldCheck, Sparkles, UserRound } from "lucide-react";
+import { BarChart3, Bot, ImageUp, LogOut, Menu, PackageSearch, Search, ShieldCheck, Sparkles, UserRound, X } from "lucide-react";
 import toast from "react-hot-toast";
 
 import {
@@ -24,7 +24,7 @@ import ProductsView from "./views/ProductsView.jsx";
 const navItems = [
   { id: "dashboard", label: "Dashboard", icon: BarChart3 },
   { id: "products", label: "Products", icon: PackageSearch },
-  { id: "discovery", label: "Discovery", icon: Search },
+  { id: "product-search", label: "Product Search", icon: Search },
   { id: "assistant", label: "AI Assistant", icon: Bot },
   { id: "image-search", label: "Image Search", icon: ImageUp },
 ];
@@ -122,17 +122,34 @@ function formatCurrency(value) {
   }).format(value || 0);
 }
 
-function AppSidebar({ activeView, onNavigate, user }) {
+function AppSidebar({ activeView, onNavigate, user, mobile = false, onClose = null }) {
   return (
-    <aside className="hidden h-screen w-72 shrink-0 border-r border-[#d8dfdd] bg-white/75 px-5 py-6 backdrop-blur lg:sticky lg:top-0 lg:flex lg:flex-col">
-      <div className="flex items-center gap-3">
-        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#102227] text-white">
-          <Sparkles aria-hidden="true" size={23} />
+    <aside
+      className={`${
+        mobile
+          ? "flex h-full w-72 flex-col border-r border-[#d8dfdd] bg-white px-5 py-6"
+          : "hidden h-screen w-72 shrink-0 border-r border-[#d8dfdd] bg-white/75 px-5 py-6 backdrop-blur lg:sticky lg:top-0 lg:flex lg:flex-col"
+      }`}
+    >
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#102227] text-white">
+            <Sparkles aria-hidden="true" size={23} />
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-ink">WFX AI ERP</p>
+            <p className="text-xs text-slate-500">Connected workspace</p>
+          </div>
         </div>
-        <div>
-          <p className="text-sm font-semibold text-ink">WFX AI ERP</p>
-          <p className="text-xs text-slate-500">Connected workspace</p>
-        </div>
+        {mobile ? (
+          <button
+            className="flex h-10 w-10 items-center justify-center rounded-2xl border border-slate-200 text-slate-600"
+            onClick={onClose}
+            type="button"
+          >
+            <X aria-hidden="true" size={18} />
+          </button>
+        ) : null}
       </div>
 
       <nav className="mt-10 space-y-2">
@@ -148,7 +165,10 @@ function AppSidebar({ activeView, onNavigate, user }) {
                   : "text-slate-600 hover:bg-[#f7f9f8] hover:text-ink"
               }`}
               key={item.id}
-              onClick={() => onNavigate(item.id)}
+              onClick={() => {
+                onNavigate(item.id);
+                onClose?.();
+              }}
               type="button"
             >
               <Icon aria-hidden="true" size={18} />
@@ -179,7 +199,7 @@ function AppSidebar({ activeView, onNavigate, user }) {
   );
 }
 
-function AppHeader({ activeView, onLogout }) {
+function AppHeader({ activeView, onLogout, onOpenMenu }) {
   const titleMap = {
     dashboard: {
       eyebrow: "Operations overview",
@@ -189,9 +209,9 @@ function AppHeader({ activeView, onLogout }) {
       eyebrow: "Catalog workspace",
       title: "Products",
     },
-    discovery: {
+    "product-search": {
       eyebrow: "Typesense search",
-      title: "Product Discovery",
+      title: "Product Search",
     },
     assistant: {
       eyebrow: "Natural language layer",
@@ -206,11 +226,20 @@ function AppHeader({ activeView, onLogout }) {
   const current = titleMap[activeView];
 
   return (
-    <header className="border-b border-[#d8dfdd] bg-white/70 px-5 py-4 backdrop-blur md:px-8">
+    <header className="border-b border-[#d8dfdd] bg-white/70 px-4 py-4 backdrop-blur md:px-8">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div>
-          <p className="text-sm font-semibold uppercase tracking-wide text-[#d9773f]">{current.eyebrow}</p>
-          <h1 className="mt-1 text-2xl font-semibold text-ink md:text-3xl">{current.title}</h1>
+        <div className="flex items-start gap-3">
+          <button
+            className="mt-1 flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-700 lg:hidden"
+            onClick={onOpenMenu}
+            type="button"
+          >
+            <Menu aria-hidden="true" size={18} />
+          </button>
+          <div>
+            <p className="text-sm font-semibold uppercase tracking-wide text-[#d9773f]">{current.eyebrow}</p>
+            <h1 className="mt-1 text-2xl font-semibold text-ink md:text-3xl">{current.title}</h1>
+          </div>
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <div className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700">
@@ -233,6 +262,7 @@ function AppHeader({ activeView, onLogout }) {
 
 function App() {
   const [activeView, setActiveView] = useState("dashboard");
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [authLoading, setAuthLoading] = useState(false);
   const [sessionReady, setSessionReady] = useState(false);
   const [user, setUser] = useState(() => getStoredUser());
@@ -243,6 +273,8 @@ function App() {
   const [summaryError, setSummaryError] = useState("");
 
   const [page, setPage] = useState(1);
+  const [sortBy, setSortBy] = useState("style_number");
+  const [sortOrder, setSortOrder] = useState("asc");
   const [filters, setFilters] = useState(defaultFilters);
   const deferredFilters = useDeferredValue(filters);
   const [products, setProducts] = useState({ items: [], page: 1, page_size: 8, total: 0 });
@@ -317,7 +349,7 @@ function App() {
   }, [user]);
 
   useEffect(() => {
-    if (!user) {
+    if (!user || activeView !== "products") {
       return;
     }
 
@@ -328,6 +360,8 @@ function App() {
     getProducts({
       page,
       page_size: 8,
+      sort_by: sortBy,
+      sort_order: sortOrder,
       ...deferredFilters,
     })
       .then((data) => {
@@ -368,7 +402,7 @@ function App() {
 
         setProductsLoading(false);
       });
-  }, [user, page, deferredFilters]);
+  }, [user, page, deferredFilters, sortBy, sortOrder, activeView]);
 
   useEffect(() => {
     if (!user || !selectedStyleNumber || !isProductDetailOpen) {
@@ -455,6 +489,14 @@ function App() {
     setProductDetailError("");
   }
 
+  function handleSortChange(nextSortBy, nextSortOrder) {
+    startTransition(() => {
+      setPage(1);
+      setSortBy(nextSortBy);
+      setSortOrder(nextSortOrder);
+    });
+  }
+
   function handleResetFilters() {
     startTransition(() => {
       setPage(1);
@@ -476,13 +518,35 @@ function App() {
 
   return (
     <main className="min-h-screen bg-[linear-gradient(180deg,#f4efe8_0%,#f8faf9_36%,#edf3f2_100%)] text-ink">
+      {mobileNavOpen ? (
+        <div className="fixed inset-0 z-50 flex lg:hidden">
+          <button
+            aria-label="Close navigation"
+            className="absolute inset-0 bg-[#102227]/45 backdrop-blur-sm"
+            onClick={() => setMobileNavOpen(false)}
+            type="button"
+          />
+          <AppSidebar
+            activeView={activeView}
+            mobile
+            onClose={() => setMobileNavOpen(false)}
+            onNavigate={setActiveView}
+            user={user}
+          />
+        </div>
+      ) : null}
+
       <div className="flex min-h-screen">
         <AppSidebar activeView={activeView} onNavigate={setActiveView} user={user} />
 
         <section className="flex min-w-0 flex-1 flex-col">
-          <AppHeader activeView={activeView} onLogout={handleLogout} />
+          <AppHeader
+            activeView={activeView}
+            onLogout={handleLogout}
+            onOpenMenu={() => setMobileNavOpen(true)}
+          />
 
-          <div className="flex-1 overflow-y-auto px-5 py-6 md:px-8">
+          <div className="flex-1 overflow-y-auto px-4 py-6 md:px-8">
             {activeView === "dashboard" ? (
               <div className="space-y-4">
                 <ErrorBanner
@@ -517,6 +581,7 @@ function App() {
                 onProductModalClose={handleProductModalClose}
                 onProductSelect={handleProductSelect}
                 onResetFilters={handleResetFilters}
+                onSortChange={handleSortChange}
                 page={page}
                 productDetailError={productDetailError}
                 products={products}
@@ -524,6 +589,8 @@ function App() {
                 productsLoading={productsLoading}
                 selectedProduct={selectedProduct}
                 selectedProductLoading={selectedProductLoading}
+                sortBy={sortBy}
+                sortOrder={sortOrder}
               />
             ) : null}
 
@@ -531,7 +598,7 @@ function App() {
               <AssistantView getApiErrorMessage={getApiErrorMessage} notifyError={notifyError} />
             ) : null}
 
-            {activeView === "discovery" ? (
+            {activeView === "product-search" ? (
               <ProductSearchView
                 formatCurrency={formatCurrency}
                 getApiErrorMessage={getApiErrorMessage}

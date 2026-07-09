@@ -2,6 +2,7 @@ import { motion } from "framer-motion";
 import {
   ArrowUpDown,
   Building2,
+  Filter,
   ImageIcon,
   Layers3,
   LoaderCircle,
@@ -156,16 +157,26 @@ export default function ProductSearchView({
 }) {
   const [query, setQuery] = useState("");
   const [filters, setFilters] = useState(defaultFilters);
+  const [draftFilters, setDraftFilters] = useState(defaultFilters);
   const deferredQuery = useDeferredValue(query);
   const deferredFilters = useDeferredValue(filters);
   const [results, setResults] = useState({ items: [], count: 0, engine: "" });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [hasSearched, setHasSearched] = useState(false);
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   const activeFilterCount = useMemo(
     () => Object.values(filters).filter(Boolean).length,
     [filters],
+  );
+  const draftFilterCount = useMemo(
+    () => Object.values(draftFilters).filter(Boolean).length,
+    [draftFilters],
+  );
+  const hasPendingFilterChanges = useMemo(
+    () => filterFields.some((field) => draftFilters[field.key] !== filters[field.key]),
+    [draftFilters, filters],
   );
 
   useEffect(() => {
@@ -201,11 +212,17 @@ export default function ProductSearchView({
   }, [deferredQuery, deferredFilters, getApiErrorMessage, notifyError]);
 
   function handleFilterChange(key, value) {
-    setFilters((current) => ({ ...current, [key]: value }));
+    setDraftFilters((current) => ({ ...current, [key]: value }));
   }
 
   function handleResetFilters() {
     setFilters(defaultFilters);
+    setDraftFilters(defaultFilters);
+  }
+
+  function handleApplyFilters() {
+    setFilters(draftFilters);
+    setFiltersOpen(false);
   }
 
   return (
@@ -227,57 +244,100 @@ export default function ProductSearchView({
               {activeFilterCount} active filters
             </div>
           </div>
-
-          <div className="relative mt-5">
-            <Search
-              aria-hidden="true"
-              className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
-              size={18}
-            />
-            <input
-              className="w-full rounded-[20px] border border-white/10 bg-white/95 py-4 pl-12 pr-4 text-sm text-ink outline-none transition focus:border-[#4b8b69] focus:ring-2 focus:ring-[#4b8b69]/20"
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder='Try "Blue floral dress" or "Cotton polo t-shirt"'
-              value={query}
-            />
-          </div>
         </div>
 
-        <div className="border-t border-slate-200 bg-[#fbfcfb] px-4 py-5 sm:px-5 md:px-6">
-          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-sm font-medium text-slate-600">Refine results with apparel-specific filters.</p>
-            <button
-              className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
-              onClick={handleResetFilters}
-              type="button"
-            >
-              <RotateCcw aria-hidden="true" size={15} />
-              Reset filters
-            </button>
+        <div className="border-t border-slate-200 bg-white px-4 py-4 sm:px-5 md:px-6">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+            <div className="relative min-w-0 flex-1">
+              <Search
+                aria-hidden="true"
+                className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
+                size={18}
+              />
+              <input
+                className="w-full rounded-2xl border border-slate-200 bg-white py-3.5 pl-12 pr-4 text-sm text-ink outline-none transition focus:border-[#4b8b69] focus:ring-2 focus:ring-[#4b8b69]/15"
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder='Try "Blue floral dress" or "Cotton polo t-shirt"'
+                value={query}
+              />
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                className="relative inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"
+                onClick={() => setFiltersOpen((current) => !current)}
+                type="button"
+              >
+                <Filter aria-hidden="true" size={16} />
+                Filters
+                {activeFilterCount ? (
+                  <span className="absolute -right-1 -top-1 h-3 w-3 rounded-full border-2 border-white bg-[#d44f3f]" />
+                ) : null}
+              </button>
+              <button
+                className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                disabled={!activeFilterCount}
+                onClick={handleResetFilters}
+                type="button"
+              >
+                <RotateCcw aria-hidden="true" size={15} />
+                Reset
+              </button>
+              <span className="rounded-full bg-[#f4efe8] px-3 py-2 text-xs font-semibold uppercase tracking-wide text-[#102227]">
+                {activeFilterCount} active
+              </span>
+              {filtersOpen && hasPendingFilterChanges ? (
+                <span className="rounded-full bg-[#fff4ed] px-3 py-2 text-xs font-semibold uppercase tracking-wide text-[#b65a29]">
+                  {draftFilterCount} pending
+                </span>
+              ) : null}
+            </div>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-            {filterFields.map((field) => {
-              const Icon = field.icon;
-              return (
-                <label
-                  className="rounded-[20px] border border-slate-200 bg-white px-4 py-3 shadow-[0_8px_24px_rgba(16,34,39,0.03)] transition focus-within:border-[#4b8b69] focus-within:ring-2 focus-within:ring-[#4b8b69]/10"
-                  key={field.key}
-                >
-                  <span className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                    <Icon aria-hidden="true" size={14} />
-                    {field.label}
-                  </span>
-                  <input
-                    className="mt-3 w-full border-0 bg-transparent p-0 text-sm text-ink outline-none placeholder:text-slate-400"
-                    onChange={(event) => handleFilterChange(field.key, event.target.value)}
-                    placeholder={field.placeholder}
-                    value={filters[field.key]}
-                  />
-                </label>
-              );
-            })}
+          {filtersOpen ? (
+            <div className="mt-4 border-t border-slate-200 pt-4">
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+                {filterFields.map((field) => {
+                  const Icon = field.icon;
+                  return (
+                    <label
+                      className="rounded-2xl border border-slate-200 bg-white px-3 py-2.5 shadow-[0_8px_24px_rgba(16,34,39,0.03)] transition focus-within:border-[#4b8b69] focus-within:ring-2 focus-within:ring-[#4b8b69]/10"
+                      key={field.key}
+                    >
+                      <span className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                        <Icon aria-hidden="true" size={13} />
+                        {field.label}
+                      </span>
+                      <input
+                        className="mt-2 w-full border-0 bg-transparent p-0 text-sm text-ink outline-none placeholder:text-slate-400"
+                        onChange={(event) => handleFilterChange(field.key, event.target.value)}
+                        placeholder={field.placeholder}
+                        value={draftFilters[field.key]}
+                      />
+                    </label>
+                  );
+                })}
+              </div>
+            <div className="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-end">
+              <button
+                className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                disabled={!activeFilterCount && !draftFilterCount}
+                onClick={handleResetFilters}
+                type="button"
+              >
+                <RotateCcw aria-hidden="true" size={15} />
+                Reset filters
+              </button>
+              <button
+                className="inline-flex items-center justify-center rounded-2xl bg-[#102227] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#12323a] disabled:cursor-not-allowed disabled:opacity-50"
+                disabled={!hasPendingFilterChanges}
+                onClick={handleApplyFilters}
+                type="button"
+              >
+                Apply filters
+              </button>
+            </div>
           </div>
+          ) : null}
         </div>
       </SurfaceCard>
 
@@ -287,7 +347,7 @@ export default function ProductSearchView({
         <div className="grid gap-4">
           {Array.from({ length: 3 }).map((_, index) => (
             <SurfaceCard className="p-5" key={index}>
-              <SkeletonBlock className="h-32 w-full" />
+              <SkeletonBlock className="h-24 w-full" />
             </SurfaceCard>
           ))}
         </div>

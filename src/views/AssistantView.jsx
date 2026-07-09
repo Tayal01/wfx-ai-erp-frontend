@@ -23,6 +23,12 @@ const AGENT_STEPS = [
   "Summarizing results...",
 ];
 const RESULT_PREVIEW_LIMIT = 8;
+const SUGGESTED_PROMPTS = [
+  "Which buyer generated the highest revenue?",
+  "Show pending invoices above 71000",
+  "Top suppliers by order volume",
+  "Products with highest selling price",
+];
 
 function ResultsTable({ rows }) {
   if (!rows?.length) {
@@ -171,6 +177,27 @@ function AssistantResultBubble({ message }) {
   );
 }
 
+function SuggestedPrompts({ disabled, onSelect }) {
+  return (
+    <div className="rounded-[24px] border border-slate-200 bg-[#f8faf9] px-4 py-4">
+      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Suggested prompts</p>
+      <div className="mt-3 grid gap-2 md:grid-cols-2">
+        {SUGGESTED_PROMPTS.map((prompt) => (
+          <button
+            className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left text-sm font-medium text-slate-700 transition hover:border-[#4b8b69] hover:text-ink disabled:cursor-not-allowed disabled:opacity-60"
+            disabled={disabled}
+            key={prompt}
+            onClick={() => onSelect(prompt)}
+            type="button"
+          >
+            {prompt}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function AssistantView({ getApiErrorMessage, notifyError }) {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -196,9 +223,8 @@ export default function AssistantView({ getApiErrorMessage, notifyError }) {
     return () => window.clearInterval(intervalId);
   }, [loading]);
 
-  async function handleSubmit(event) {
-    event.preventDefault();
-    const question = input.trim();
+  async function submitQuestion(questionText) {
+    const question = questionText.trim();
     if (!question || loading) {
       return;
     }
@@ -230,6 +256,13 @@ export default function AssistantView({ getApiErrorMessage, notifyError }) {
     }
   }
 
+  async function handleSubmit(event) {
+    event.preventDefault();
+    await submitQuestion(input);
+  }
+
+  const isEmptyChat = messages.length === 0 && !loading;
+
   return (
     <div className="space-y-5">
       <SurfaceCard className="p-5">
@@ -244,13 +277,14 @@ export default function AssistantView({ getApiErrorMessage, notifyError }) {
         </div>
       </SurfaceCard>
 
-      <SurfaceCard className="flex min-h-[420px] flex-col p-5 md:p-6">
-        <div className="max-h-[56vh] min-h-[260px] flex-1 space-y-4 overflow-y-auto pr-1">
-          {messages.length === 0 && !loading ? (
-            <EmptyState
-              className="py-8"
-              message='Try "Which buyer generated the highest revenue?" or "Show pending invoices above 71000."'
-            />
+      <SurfaceCard className="flex min-h-[380px] flex-col p-5 md:min-h-[460px] md:p-6">
+        <div
+          className={`max-h-[56vh] min-h-[230px] flex-1 overflow-y-auto pr-1 md:min-h-[300px] ${
+            isEmptyChat ? "flex items-center justify-center" : "space-y-4"
+          }`}
+        >
+          {isEmptyChat ? (
+            <SuggestedPrompts disabled={loading} onSelect={submitQuestion} />
           ) : null}
 
           {messages.map((message, index) => {

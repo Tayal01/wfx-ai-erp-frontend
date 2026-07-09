@@ -127,7 +127,7 @@ function AppSidebar({ activeView, onNavigate, user, mobile = false, onClose = nu
     <aside
       className={`${
         mobile
-          ? "flex h-full w-72 flex-col border-r border-[#d8dfdd] bg-white px-5 py-6"
+          ? "relative z-10 flex h-full w-[min(18rem,calc(100vw-3rem))] flex-col border-r border-[#d8dfdd] bg-white px-5 py-6 shadow-[20px_0_60px_rgba(16,34,39,0.18)]"
           : "hidden h-screen w-72 shrink-0 border-r border-[#d8dfdd] bg-white/75 px-5 py-6 backdrop-blur lg:sticky lg:top-0 lg:flex lg:flex-col"
       }`}
     >

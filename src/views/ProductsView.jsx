@@ -321,60 +321,27 @@ export default function ProductsView({
   return (
     <>
       <div className="space-y-5">
-        <motion.div
-          animate="show"
-          className="grid gap-4 xl:grid-cols-[minmax(0,1.6fr)_repeat(3,minmax(0,1fr))]"
-          initial="hidden"
-          variants={gridStagger}
-        >
-          <motion.div variants={cardRise}>
-            <SurfaceCard className="h-full p-5">
-              <SectionTitle
-                subtitle="Focused product search for merchandising teams"
-                title="Product catalog"
-                action={
-                  <button
-                    className="inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
-                    onClick={() => setFiltersOpen((current) => !current)}
-                    type="button"
-                  >
-                    <Filter aria-hidden="true" size={16} />
-                    {filtersOpen ? "Hide filters" : "Show filters"}
-                  </button>
-                }
-              />
-            </SurfaceCard>
-          </motion.div>
-          {[
-            {
-              icon: Search,
-              label: "Catalog size",
-              value: formatCompactNumber(products?.total || 0),
-              chipClass: "bg-gradient-to-br from-[#0b7ea3]/16 to-[#0b7ea3]/5 text-[#0b7ea3]",
-            },
-            {
-              icon: Filter,
-              label: "Active filters",
-              value: String(activeFilters),
-              chipClass: "bg-gradient-to-br from-[#d9773f]/16 to-[#d9773f]/5 text-[#d9773f]",
-            },
-            {
-              icon: Tag,
-              label: "Page",
-              value: `${page}/${totalPages}`,
-              chipClass: "bg-gradient-to-br from-[#4b8b69]/18 to-[#4b8b69]/5 text-[#4b8b69]",
-            },
-          ].map((stat) => (
-            <motion.div
-              key={stat.label}
-              transition={{ type: "spring", stiffness: 320, damping: 26 }}
-              variants={cardRise}
-              whileHover={{ y: -4, boxShadow: "0 22px 48px rgba(16,34,39,0.12)" }}
-            >
-              <CompactStat chipClass={stat.chipClass} icon={stat.icon} label={stat.label} value={stat.value} />
-            </motion.div>
-          ))}
-        </motion.div>
+        <div className="grid gap-4 xl:grid-cols-[minmax(0,1.6fr)_repeat(3,minmax(0,1fr))]">
+          <SurfaceCard className="p-5">
+            <SectionTitle
+              subtitle="Focused product search for merchandising teams"
+              title="Product catalog"
+              action={
+                <button
+                  className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                  onClick={() => setFiltersOpen((current) => !current)}
+                  type="button"
+                >
+                  <Filter aria-hidden="true" size={16} />
+                  {filtersOpen ? "Hide filters" : "Show filters"}
+                </button>
+              }
+            />
+          </SurfaceCard>
+          <CompactStat icon={Search} label="Catalog size" value={formatCompactNumber(products?.total || 0)} />
+          <CompactStat icon={Filter} label="Active filters" value={String(activeFilters)} />
+          <CompactStat icon={Tag} label="Page" value={`${page}/${totalPages}`} />
+        </div>
 
         {filtersOpen ? (
           <SurfaceCard className="p-5">

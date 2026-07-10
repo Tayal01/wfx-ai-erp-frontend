@@ -3,18 +3,16 @@ import { BarChart3, Bot, ImageUp, LogOut, Menu, PackageSearch, Search, UserRound
 import toast from "react-hot-toast";
 
 import {
-  clearSession,
+  getCurrentUser,
   getDashboardSummary,
-  getMe,
   getProductDetail,
   getProducts,
-  getStoredToken,
-  getStoredUser,
   login,
-  persistSession,
+  onAuthChange,
+  signOut,
 } from "./api.js";
 import { Logo } from "./components/Logo.jsx";
-import { ErrorBanner } from "./components/ui.jsx";
+import { ConfirmDialog, ErrorBanner } from "./components/ui.jsx";
 import AssistantView from "./views/AssistantView.jsx";
 import DashboardView from "./views/DashboardView.jsx";
 import ImageSearchView from "./views/ImageSearchView.jsx";
@@ -267,9 +265,10 @@ function AppHeader({ activeView, onLogout, onOpenMenu }) {
 function App() {
   const [activeView, setActiveView] = useState(getStoredView);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
   const [authLoading, setAuthLoading] = useState(false);
   const [sessionReady, setSessionReady] = useState(false);
-  const [user, setUser] = useState(() => getStoredUser());
+  const [user, setUser] = useState(null);
 
   const cachedSummary = getCachedDashboardSummary();
   const [summary, setSummary] = useState(cachedSummary);
@@ -332,20 +331,30 @@ function App() {
   }, [activeView]);
 
   useEffect(() => {
-    const token = getStoredToken();
+    let active = true;
 
-    if (!token) {
-      setSessionReady(true);
-      return;
-    }
-
-    getMe()
-      .then((nextUser) => setUser(nextUser))
-      .catch(() => {
-        clearSession();
-        setUser(null);
+    getCurrentUser()
+      .then((nextUser) => {
+        if (active) {
+          setUser(nextUser);
+        }
       })
-      .finally(() => setSessionReady(true));
+      .finally(() => {
+        if (active) {
+          setSessionReady(true);
+        }
+      });
+
+    const unsubscribe = onAuthChange((nextUser) => {
+      if (active) {
+        setUser(nextUser);
+      }
+    });
+
+    return () => {
+      active = false;
+      unsubscribe();
+    };
   }, []);
 
   useEffect(() => {
@@ -451,9 +460,8 @@ function App() {
   async function handleLogin(form) {
     setAuthLoading(true);
     try {
-      const data = await login(form);
-      persistSession(data.access_token, data.user);
-      setUser(data.user);
+      const nextUser = await login(form);
+      setUser(nextUser);
       setSessionReady(true);
       notifySuccess("login", "Signed in. Protected ERP APIs are ready.");
     } finally {
@@ -466,7 +474,7 @@ function App() {
     productsRequestRef.current += 1;
     productDetailRequestRef.current += 1;
     setActiveView("dashboard");
-    clearSession();
+    signOut();
     sessionStorage.removeItem(DASHBOARD_CACHE_KEY);
     setUser(null);
     setSummary(null);
@@ -551,7 +559,7 @@ function App() {
         <section className="flex min-w-0 flex-1 flex-col">
           <AppHeader
             activeView={activeView}
-            onLogout={handleLogout}
+            onLogout={() => setLogoutConfirmOpen(true)}
             onOpenMenu={() => setMobileNavOpen(true)}
           />
 
@@ -626,6 +634,20 @@ function App() {
           </div>
         </section>
       </div>
+
+      <ConfirmDialog
+        cancelLabel="Cancel"
+        confirmLabel="Sign out"
+        icon={LogOut}
+        message="You'll need to sign in again to access the ERP workspace."
+        onCancel={() => setLogoutConfirmOpen(false)}
+        onConfirm={() => {
+          setLogoutConfirmOpen(false);
+          handleLogout();
+        }}
+        open={logoutConfirmOpen}
+        title="Sign out of WFX AI ERP?"
+      />
     </main>
   );
 }

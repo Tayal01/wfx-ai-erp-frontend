@@ -1,16 +1,20 @@
 import { motion } from "framer-motion";
 import {
+  AlertCircle,
   BarChart3,
   Boxes,
-  CheckCircle2,
   ClipboardList,
-  FileSpreadsheet,
-  PackageSearch,
+  CreditCard,
+  LineChart,
   Tag,
+  TrendingUp,
   Truck,
+  Users,
 } from "lucide-react";
 
-import { CompactStat, MetricCard, SectionTitle, SurfaceCard } from "../components/ui.jsx";
+import { AreaTrend, HorizontalBars, StatusDonut, statusColor } from "../components/charts.jsx";
+import { cardRise, ChartReveal, gridStagger } from "../components/motion.jsx";
+import { EmptyState, MetricCard, SkeletonBlock, SurfaceCard } from "../components/ui.jsx";
 
 export default function DashboardView({
   summary,
@@ -22,104 +26,229 @@ export default function DashboardView({
   const charts = summary?.charts;
   const recent = summary?.recent;
 
+  const buyerRevenueData = (charts?.top_buyers || [])
+    .slice(0, 6)
+    .map((buyer) => ({ name: buyer.buyer, value: buyer.revenue }));
+  const categoryData = (charts?.product_categories || [])
+    .slice(0, 8)
+    .map((item) => ({ name: item.category, value: item.count }));
+  const orderStatusData = (charts?.order_status || []).map((item) => ({
+    name: item.status,
+    value: item.count,
+  }));
+  const paymentStatusData = (charts?.payment_status || []).map((item) => ({
+    name: item.status,
+    value: item.count,
+  }));
+  const monthlyTrend = charts?.monthly_trend || [];
+  const formatCompactCurrency = (value) => `$${formatCompactNumber(value)}`;
+
   const cards = [
     {
+      label: "Total revenue",
+      rawValue: kpis?.estimated_order_revenue,
+      format: formatCompactCurrency,
+      value: kpis ? formatCompactCurrency(kpis.estimated_order_revenue) : "...",
+      detail: "Booked order value",
+      icon: TrendingUp,
+      chipClass: "bg-gradient-to-br from-[#d9773f]/16 to-[#d9773f]/5 text-[#d9773f]",
+    },
+    {
       label: "Sales orders",
+      rawValue: kpis?.sales_orders,
+      format: formatCompactNumber,
       value: kpis ? formatCompactNumber(kpis.sales_orders) : "...",
       detail: "Open order base",
       icon: ClipboardList,
-      tone: "bg-[#12323a]",
+      chipClass: "bg-gradient-to-br from-[#12323a]/16 to-[#12323a]/5 text-[#12323a]",
     },
     {
       label: "Finished goods",
+      rawValue: kpis?.finished_goods,
+      format: formatCompactNumber,
       value: kpis ? formatCompactNumber(kpis.finished_goods) : "...",
       detail: "Catalog coverage",
       icon: Boxes,
-      tone: "bg-[#4b8b69]",
+      chipClass: "bg-gradient-to-br from-[#4b8b69]/18 to-[#4b8b69]/5 text-[#4b8b69]",
     },
     {
-      label: "Invoice amount",
-      value: kpis ? formatCurrency(kpis.invoice_amount) : "...",
-      detail: "Collected and pending",
-      icon: FileSpreadsheet,
-      tone: "bg-[#d9773f]",
+      label: "Buyers",
+      rawValue: kpis?.buyers,
+      format: formatCompactNumber,
+      value: kpis ? formatCompactNumber(kpis.buyers) : "...",
+      detail: "Active accounts",
+      icon: Users,
+      chipClass: "bg-gradient-to-br from-[#0b7ea3]/16 to-[#0b7ea3]/5 text-[#0b7ea3]",
+    },
+    {
+      label: "Suppliers",
+      rawValue: kpis?.suppliers,
+      format: formatCompactNumber,
+      value: kpis ? formatCompactNumber(kpis.suppliers) : "...",
+      detail: "Sourcing partners",
+      icon: Truck,
+      chipClass: "bg-gradient-to-br from-[#7d54c9]/16 to-[#7d54c9]/5 text-[#7d54c9]",
     },
     {
       label: "Pending invoices",
-      value: kpis ? formatCurrency(kpis.pending_invoice_amount) : "...",
+      rawValue: kpis?.pending_invoice_amount,
+      format: formatCompactCurrency,
+      value: kpis ? formatCompactCurrency(kpis.pending_invoice_amount) : "...",
       detail: "Requires follow-up",
-      icon: CheckCircle2,
-      tone: "bg-[#b44e46]",
+      icon: AlertCircle,
+      chipClass: "bg-gradient-to-br from-[#b44e46]/16 to-[#b44e46]/5 text-[#b44e46]",
     },
   ];
 
   return (
     <div className="space-y-6">
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1.4fr)_repeat(2,minmax(0,1fr))]">
-        <SurfaceCard className="p-5">
-          <SectionTitle
-            subtitle="Live merchandising overview"
-            title="Overview"
-          />
-          <p className="mt-4 max-w-2xl text-sm leading-7 text-slate-600">
-            Orders, catalog health, and invoicing signals for the current workspace.
-          </p>
-        </SurfaceCard>
-        <CompactStat icon={PackageSearch} label="Buyers" value={kpis ? formatCompactNumber(kpis.buyers) : "..."} />
-        <CompactStat icon={Truck} label="Suppliers" value={kpis ? formatCompactNumber(kpis.suppliers) : "..."} />
-      </div>
-
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        {cards.map((card, index) => (
+      <motion.section
+        animate="show"
+        className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
+        initial="hidden"
+        variants={gridStagger}
+      >
+        {cards.map((card) => (
           <motion.div
-            animate={{ opacity: 1, y: 0 }}
-            initial={{ opacity: 0, y: 10 }}
             key={card.label}
-            transition={{ delay: index * 0.05, duration: 0.25 }}
+            transition={{ type: "spring", stiffness: 320, damping: 26 }}
+            variants={cardRise}
+            whileHover={{ y: -4, boxShadow: "0 22px 48px rgba(16,34,39,0.12)" }}
           >
-            <MetricCard {...card} value={loading ? "..." : card.value} />
+            <MetricCard {...card} />
           </motion.div>
         ))}
+      </motion.section>
+
+      <section className="grid gap-5 lg:grid-cols-2">
+        <SurfaceCard className="p-5">
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-semibold text-ink">Revenue trend</h3>
+            <TrendingUp aria-hidden="true" className="text-[#d9773f]" size={20} />
+          </div>
+          <div className="mt-4">
+            {loading && !monthlyTrend.length ? (
+              <SkeletonBlock className="h-[240px]" />
+            ) : monthlyTrend.length ? (
+              <ChartReveal>
+                <AreaTrend
+                  color="#d9773f"
+                  data={monthlyTrend}
+                  dataKey="revenue"
+                  valueFormatter={(value) => `$${formatCompactNumber(value)}`}
+                />
+              </ChartReveal>
+            ) : (
+              <EmptyState className="flex h-[240px] items-center justify-center" message="Trend data coming soon" />
+            )}
+          </div>
+        </SurfaceCard>
+
+        <SurfaceCard className="p-5">
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-semibold text-ink">Orders trend</h3>
+            <LineChart aria-hidden="true" className="text-[#2f9e6b]" size={20} />
+          </div>
+          <div className="mt-4">
+            {loading && !monthlyTrend.length ? (
+              <SkeletonBlock className="h-[240px]" />
+            ) : monthlyTrend.length ? (
+              <ChartReveal>
+                <AreaTrend
+                  color="#2f9e6b"
+                  data={monthlyTrend}
+                  dataKey="orders"
+                  valueFormatter={(value) => `${formatCompactNumber(value)} orders`}
+                />
+              </ChartReveal>
+            ) : (
+              <EmptyState className="flex h-[240px] items-center justify-center" message="Trend data coming soon" />
+            )}
+          </div>
+        </SurfaceCard>
       </section>
 
-      <section className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
+      <section className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_420px]">
         <SurfaceCard className="p-5">
           <div className="flex items-center justify-between">
             <h3 className="text-lg font-semibold text-ink">Top buyers by revenue</h3>
             <BarChart3 aria-hidden="true" className="text-[#d9773f]" size={20} />
           </div>
-          <div className="mt-5 space-y-3">
-            {(charts?.top_buyers || []).slice(0, 6).map((buyer, index) => (
-              <div className="grid grid-cols-[1fr_110px] items-center gap-4" key={buyer.buyer}>
-                <div>
-                  <div className="flex items-center justify-between text-sm font-medium text-ink">
-                    <span className="truncate">{buyer.buyer}</span>
-                    <span className="ml-4 text-slate-500">{formatCurrency(buyer.revenue)}</span>
-                  </div>
-                  <div className="mt-2 h-2 rounded-full bg-[#eef3f2]">
-                    <div
-                      className="h-2 rounded-full bg-[#d9773f]"
-                      style={{ width: `${Math.max(18, 100 - index * 12)}%` }}
-                    />
-                  </div>
-                </div>
-              </div>
-            ))}
+          <div className="mt-4 h-[360px]">
+            {loading && !buyerRevenueData.length ? (
+              <SkeletonBlock className="h-full" />
+            ) : (
+              <ChartReveal className="h-full">
+                <HorizontalBars
+                  color="#d9773f"
+                  data={buyerRevenueData}
+                  valueFormatter={(value) => `$${formatCompactNumber(value)}`}
+                />
+              </ChartReveal>
+            )}
           </div>
         </SurfaceCard>
 
         <SurfaceCard className="p-5">
           <div className="flex items-center justify-between">
             <h3 className="text-lg font-semibold text-ink">Category mix</h3>
-            <Tag aria-hidden="true" className="text-[#4b8b69]" size={20} />
+            <Tag aria-hidden="true" className="text-[#2f9e6b]" size={20} />
           </div>
-          <div className="mt-5 space-y-3">
-            {(charts?.product_categories || []).slice(0, 5).map((item) => (
-              <div className="flex items-center justify-between rounded-2xl bg-[#f7f9f8] px-3 py-3" key={item.category}>
-                <span className="text-sm font-medium text-ink">{item.category}</span>
-                <span className="text-sm text-slate-500">{item.count}</span>
-              </div>
-            ))}
+          <div className="mt-4 h-[360px]">
+            {loading && !categoryData.length ? (
+              <SkeletonBlock className="h-full" />
+            ) : (
+              <ChartReveal className="h-full">
+                <HorizontalBars
+                  color="#2f9e6b"
+                  data={categoryData}
+                  highlightMax={false}
+                  valueFormatter={(value) => `${formatCompactNumber(value)} styles`}
+                />
+              </ChartReveal>
+            )}
+          </div>
+        </SurfaceCard>
+      </section>
+
+      <section className="grid gap-5 xl:grid-cols-2">
+        <SurfaceCard className="p-5">
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-semibold text-ink">Order status</h3>
+            <ClipboardList aria-hidden="true" className="text-[#0b7ea3]" size={20} />
+          </div>
+          <div className="mt-4">
+            {loading && !orderStatusData.length ? (
+              <SkeletonBlock className="h-[200px]" />
+            ) : (
+              <ChartReveal>
+                <StatusDonut
+                  data={orderStatusData}
+                  totalLabel="orders"
+                  valueFormatter={(value) => `${formatCompactNumber(value)} orders`}
+                />
+              </ChartReveal>
+            )}
+          </div>
+        </SurfaceCard>
+
+        <SurfaceCard className="p-5">
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-semibold text-ink">Payment status</h3>
+            <CreditCard aria-hidden="true" className="text-[#2f9e6b]" size={20} />
+          </div>
+          <div className="mt-4">
+            {loading && !paymentStatusData.length ? (
+              <SkeletonBlock className="h-[200px]" />
+            ) : (
+              <ChartReveal>
+                <StatusDonut
+                  data={paymentStatusData}
+                  totalLabel="invoices"
+                  valueFormatter={(value) => `${formatCompactNumber(value)} invoices`}
+                />
+              </ChartReveal>
+            )}
           </div>
         </SurfaceCard>
       </section>
@@ -158,7 +287,10 @@ export default function DashboardView({
                       {order.order_number} · {order.style_number} · Qty {order.quantity}
                     </p>
                   </div>
-                  <span className="rounded-full bg-[#f4efe8] px-3 py-1 text-xs font-semibold text-slate-600">
+                  <span
+                    className="rounded-full px-3 py-1 text-xs font-semibold capitalize"
+                    style={{ background: `${statusColor(order.status)}1F`, color: statusColor(order.status) }}
+                  >
                     {order.status}
                   </span>
                 </div>

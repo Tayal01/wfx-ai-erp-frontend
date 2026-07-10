@@ -1,5 +1,5 @@
 import { startTransition, useDeferredValue, useEffect, useRef, useState } from "react";
-import { BarChart3, Bot, ImageUp, LogOut, Menu, PackageSearch, Search, ShieldCheck, Sparkles, UserRound, X } from "lucide-react";
+import { BarChart3, Bot, ImageUp, LogOut, Menu, PackageSearch, Search, UserRound, X } from "lucide-react";
 import toast from "react-hot-toast";
 
 import {
@@ -13,6 +13,7 @@ import {
   login,
   persistSession,
 } from "./api.js";
+import { Logo } from "./components/Logo.jsx";
 import { ErrorBanner } from "./components/ui.jsx";
 import AssistantView from "./views/AssistantView.jsx";
 import DashboardView from "./views/DashboardView.jsx";
@@ -28,6 +29,14 @@ const navItems = [
   { id: "assistant", label: "AI Assistant", icon: Bot },
   { id: "image-search", label: "Image Search", icon: ImageUp },
 ];
+
+const VIEW_IDS = navItems.map((item) => item.id);
+const ACTIVE_VIEW_KEY = "wfx-active-view";
+
+function getStoredView() {
+  const stored = sessionStorage.getItem(ACTIVE_VIEW_KEY);
+  return stored && VIEW_IDS.includes(stored) ? stored : "dashboard";
+}
 
 const defaultFilters = {
   category: "",
@@ -133,9 +142,7 @@ function AppSidebar({ activeView, onNavigate, user, mobile = false, onClose = nu
     >
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#102227] text-white">
-            <Sparkles aria-hidden="true" size={23} />
-          </div>
+          <Logo className="h-12 w-12 shrink-0" />
           <div>
             <p className="text-sm font-semibold text-ink">WFX AI ERP</p>
             <p className="text-xs text-slate-500">Connected workspace</p>
@@ -226,33 +233,30 @@ function AppHeader({ activeView, onLogout, onOpenMenu }) {
   const current = titleMap[activeView];
 
   return (
-    <header className="border-b border-[#d8dfdd] bg-white/90 px-4 py-4 md:px-8 lg:bg-white/70 lg:backdrop-blur">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-start gap-3">
+    <header className="border-b border-[#d8dfdd] bg-white/80 px-4 py-3.5 backdrop-blur md:px-8">
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
           <button
-            className="mt-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-700 lg:hidden"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-700 lg:hidden"
             onClick={onOpenMenu}
             type="button"
           >
             <Menu aria-hidden="true" size={18} />
           </button>
           <div>
-            <p className="text-sm font-semibold uppercase tracking-wide text-[#d9773f]">{current.eyebrow}</p>
-            <h1 className="mt-1 text-2xl font-semibold text-ink md:text-3xl">{current.title}</h1>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#d9773f]">{current.eyebrow}</p>
+            <h1 className="text-xl font-semibold text-ink md:text-2xl">{current.title}</h1>
           </div>
         </div>
-        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-          <div className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-700 sm:px-4 sm:py-3">
-            <ShieldCheck aria-hidden="true" size={16} className="text-[#4b8b69]" />
-            Secure session
-          </div>
+
+        <div className="flex items-center gap-2 sm:gap-3">
           <button
-            className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-100 sm:px-4 sm:py-3"
+            className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-100"
             onClick={onLogout}
             type="button"
           >
-            <LogOut aria-hidden="true" size={17} />
-            Sign out
+            <LogOut aria-hidden="true" size={16} />
+            <span className="hidden sm:inline">Sign out</span>
           </button>
         </div>
       </div>
@@ -261,7 +265,7 @@ function AppHeader({ activeView, onLogout, onOpenMenu }) {
 }
 
 function App() {
-  const [activeView, setActiveView] = useState("dashboard");
+  const [activeView, setActiveView] = useState(getStoredView);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [authLoading, setAuthLoading] = useState(false);
   const [sessionReady, setSessionReady] = useState(false);
@@ -322,6 +326,10 @@ function App() {
         setSummaryLoading(false);
       });
   }
+
+  useEffect(() => {
+    sessionStorage.setItem(ACTIVE_VIEW_KEY, activeView);
+  }, [activeView]);
 
   useEffect(() => {
     const token = getStoredToken();
@@ -457,6 +465,7 @@ function App() {
     dashboardRequestRef.current += 1;
     productsRequestRef.current += 1;
     productDetailRequestRef.current += 1;
+    setActiveView("dashboard");
     clearSession();
     sessionStorage.removeItem(DASHBOARD_CACHE_KEY);
     setUser(null);

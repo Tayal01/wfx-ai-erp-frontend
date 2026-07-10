@@ -25,7 +25,7 @@ const AGENT_STEPS = [
 const RESULT_PREVIEW_LIMIT = 8;
 const SUGGESTED_PROMPTS = [
   "Which buyer generated the highest revenue?",
-  "Show pending invoices above 71000",
+  "Show pending invoices above ₹1,000",
   "Top suppliers by order volume",
   "Products with highest selling price",
 ];
@@ -264,8 +264,8 @@ export default function AssistantView({ getApiErrorMessage, notifyError }) {
   const isEmptyChat = messages.length === 0 && !loading;
 
   return (
-    <div className="space-y-5">
-      <SurfaceCard className="p-5">
+    <div className="flex h-full flex-col gap-5">
+      <SurfaceCard className="shrink-0 p-5">
         <div className="flex items-center gap-4">
           <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#102227] text-white">
             <Bot aria-hidden="true" size={19} />
@@ -277,9 +277,9 @@ export default function AssistantView({ getApiErrorMessage, notifyError }) {
         </div>
       </SurfaceCard>
 
-      <SurfaceCard className="flex min-h-[380px] flex-col p-5 md:min-h-[460px] md:p-6">
+      <SurfaceCard className="flex min-h-0 flex-1 flex-col p-5 md:p-6">
         <div
-          className={`max-h-[56vh] min-h-[230px] flex-1 overflow-y-auto pr-1 md:min-h-[300px] ${
+          className={`min-h-0 flex-1 overflow-y-auto pr-1 ${
             isEmptyChat ? "flex items-center justify-center" : "space-y-4"
           }`}
         >

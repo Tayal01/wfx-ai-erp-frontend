@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { X } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 
@@ -72,16 +73,16 @@ export function MetricCard({
   );
 }
 
-export function CompactStat({ label, value, icon: Icon }) {
+export function CompactStat({ label, value, icon: Icon, chipClass = "bg-[#f4efe8] text-[#102227]" }) {
   return (
-    <SurfaceCard className="p-4">
+    <SurfaceCard className="h-full p-4">
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</p>
           <p className="mt-2 text-2xl font-semibold tabular-nums text-ink">{value}</p>
         </div>
         {Icon ? (
-          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#f4efe8] text-[#102227]">
+          <div className={cn("flex h-10 w-10 items-center justify-center rounded-2xl", chipClass)}>
             <Icon aria-hidden="true" size={18} />
           </div>
         ) : null}
@@ -105,6 +106,80 @@ export function EmptyState({ message, className = "" }) {
 
 export function SkeletonBlock({ className = "" }) {
   return <div className={cn("animate-pulse rounded-2xl bg-slate-200/70", className)} />;
+}
+
+export function ConfirmDialog({
+  open,
+  title,
+  message,
+  confirmLabel = "Confirm",
+  cancelLabel = "Cancel",
+  icon: Icon,
+  onConfirm,
+  onCancel,
+}) {
+  useEffect(() => {
+    if (!open) {
+      return undefined;
+    }
+    function handleKey(event) {
+      if (event.key === "Escape") {
+        onCancel?.();
+      }
+    }
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, [open, onCancel]);
+
+  return (
+    <AnimatePresence>
+      {open ? (
+        <motion.div
+          animate={{ opacity: 1 }}
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-[#102227]/45 p-4 backdrop-blur-sm"
+          exit={{ opacity: 0 }}
+          initial={{ opacity: 0 }}
+          onClick={onCancel}
+        >
+          <motion.div
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            aria-modal="true"
+            className="w-full max-w-sm rounded-[24px] border border-slate-200 bg-white p-6 shadow-[0_30px_120px_rgba(16,34,39,0.28)]"
+            exit={{ opacity: 0, scale: 0.98, y: 10 }}
+            initial={{ opacity: 0, scale: 0.98, y: 14 }}
+            onClick={(event) => event.stopPropagation()}
+            role="dialog"
+            transition={{ duration: 0.2 }}
+          >
+            {Icon ? (
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#f4efe8] text-[#102227]">
+                <Icon aria-hidden="true" size={22} />
+              </div>
+            ) : null}
+            <h3 className="mt-4 text-lg font-semibold text-ink">{title}</h3>
+            {message ? <p className="mt-2 text-sm leading-6 text-slate-500">{message}</p> : null}
+            <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <button
+                className="inline-flex items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                onClick={onCancel}
+                type="button"
+              >
+                {cancelLabel}
+              </button>
+              <button
+                autoFocus
+                className="inline-flex items-center justify-center rounded-2xl bg-[#102227] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#17333a]"
+                onClick={onConfirm}
+                type="button"
+              >
+                {confirmLabel}
+              </button>
+            </div>
+          </motion.div>
+        </motion.div>
+      ) : null}
+    </AnimatePresence>
+  );
 }
 
 export function Modal({ open, title, subtitle, onClose, children }) {

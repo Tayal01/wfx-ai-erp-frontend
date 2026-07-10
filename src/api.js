@@ -80,6 +80,73 @@ export async function askAssistant(question) {
   return response.data;
 }
 
+// Streams the NL->SQL answer as Server-Sent Events. Calls onEvent(name, data) for
+// each event: "status" | "sql" | "rows" | "summary" | "done" | "error".
+export async function streamAssistant(question, { onEvent, signal } = {}) {
+  const { data } = await supabase.auth.getSession();
+  const token = data.session?.access_token;
+  const baseURL = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000";
+
+  const response = await fetch(`${baseURL}/api/ai/chat/stream`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify({ question }),
+    signal,
+  });
+
+  if (!response.ok || !response.body) {
+    let detail = "Unable to answer that ERP question.";
+    try {
+      const body = await response.json();
+      detail = body.detail || detail;
+    } catch {
+      // non-JSON error body; keep the default message
+    }
+    throw new Error(detail);
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+
+  // eslint-disable-next-line no-constant-condition
+  while (true) {
+    const { value, done } = await reader.read();
+    if (done) {
+      break;
+    }
+    buffer += decoder.decode(value, { stream: true });
+
+    const chunks = buffer.split("\n\n");
+    buffer = chunks.pop() ?? "";
+
+    for (const chunk of chunks) {
+      if (!chunk.trim()) {
+        continue;
+      }
+      let eventName = "message";
+      let dataStr = "";
+      for (const line of chunk.split("\n")) {
+        if (line.startsWith("event:")) {
+          eventName = line.slice(6).trim();
+        } else if (line.startsWith("data:")) {
+          dataStr += line.slice(5).trim();
+        }
+      }
+      let payload = {};
+      try {
+        payload = dataStr ? JSON.parse(dataStr) : {};
+      } catch {
+        payload = {};
+      }
+      onEvent?.(eventName, payload);
+    }
+  }
+}
+
 export async function searchProducts(params) {
   const response = await api.post("/api/search/products", params);
   return response.data;

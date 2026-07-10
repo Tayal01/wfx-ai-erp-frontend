@@ -17,6 +17,7 @@ import {
 import { useDeferredValue, useEffect, useMemo, useState } from "react";
 
 import { searchProducts } from "../api.js";
+import { cardRise, gridStagger } from "../components/motion.jsx";
 import {
   EmptyState,
   ErrorBanner,
@@ -115,9 +116,10 @@ function SearchResultImage({ item }) {
 function SearchResultCard({ item, formatCurrency }) {
   return (
     <motion.article
-      animate={{ opacity: 1, y: 0 }}
-      className="overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-[0_10px_30px_rgba(16,34,39,0.04)] transition hover:-translate-y-0.5 hover:border-slate-300"
-      initial={false}
+      className="overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-[0_10px_30px_rgba(16,34,39,0.04)] transition hover:border-slate-300"
+      transition={{ type: "spring", stiffness: 320, damping: 26 }}
+      variants={cardRise}
+      whileHover={{ y: -4 }}
     >
       <div className="grid gap-0 md:grid-cols-[180px_minmax(0,1fr)]">
         <SearchResultImage item={item} />
@@ -360,11 +362,11 @@ export default function ProductSearchView({
             {results.count} matches {results.engine ? `via ${results.engine}` : ""}
           </div>
           {results.items?.length ? (
-            <div className="grid gap-4">
+            <motion.div animate="show" className="grid gap-4" initial="hidden" variants={gridStagger}>
               {results.items.map((item) => (
                 <SearchResultCard formatCurrency={formatCurrency} item={item} key={item.style_number} />
               ))}
-            </div>
+            </motion.div>
           ) : (
             <EmptyState message="No products matched this search. Try broader keywords or remove filters." />
           )}

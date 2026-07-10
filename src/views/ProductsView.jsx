@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { useMemo, useState } from "react";
 
+import { cardRise, gridStagger } from "../components/motion.jsx";
 import {
   CompactStat,
   EmptyState,
@@ -308,7 +309,7 @@ export default function ProductsView({
 
   const sortOptions = [
     { value: "style_name", label: "Name" },
-    { value: "style_number", label: "Style #" },
+    { value: "style_number", label: "Style" },
     { value: "selling_price", label: "Price" },
     { value: "cost", label: "Cost" },
     { value: "gsm", label: "GSM" },
@@ -431,15 +432,22 @@ export default function ProductsView({
           {productsLoading ? <ProductListSkeleton /> : null}
 
           {!productsLoading ? (
-            <div className="mt-5 grid gap-4 md:grid-cols-2 2xl:grid-cols-2">
+            <motion.div
+              animate="show"
+              className="mt-5 grid gap-4 md:grid-cols-2 2xl:grid-cols-2"
+              initial="hidden"
+              key={`${page}-${sortBy}-${sortOrder}`}
+              variants={gridStagger}
+            >
               {(products?.items || []).map((product) => (
               <motion.button
-                animate={{ opacity: 1, y: 0 }}
-                className="rounded-[24px] border border-slate-200 bg-white px-5 py-5 text-left shadow-[0_10px_30px_rgba(16,34,39,0.04)] transition hover:-translate-y-0.5 hover:border-slate-300 hover:bg-[#fcfdfc]"
-                initial={false}
+                className="rounded-[24px] border border-slate-200 bg-white px-5 py-5 text-left shadow-[0_10px_30px_rgba(16,34,39,0.04)] transition hover:border-slate-300 hover:bg-[#fcfdfc]"
                 key={product.style_number}
                 onClick={() => onProductSelect(product.style_number)}
+                transition={{ type: "spring", stiffness: 320, damping: 26 }}
                 type="button"
+                variants={cardRise}
+                whileHover={{ y: -4 }}
               >
                 <div className="flex items-start gap-4">
                   <ProductThumbnail product={product} />
@@ -484,7 +492,7 @@ export default function ProductsView({
                 </div>
               </motion.button>
               ))}
-            </div>
+            </motion.div>
           ) : null}
 
           {!productsLoading && !(products?.items || []).length ? (

@@ -18,3 +18,13 @@ body {
   font-size: 0.95rem;
   line-height: 1.45;
 }
+
+/* Recharts: suppress the browser's default focus outline that appears
+   on a chart segment (pie sector / bar) when it is clicked. */
+.recharts-wrapper:focus,
+.recharts-wrapper *:focus,
+.recharts-surface:focus,
+.recharts-sector:focus,
+.recharts-layer:focus {
+  outline: none;
+}

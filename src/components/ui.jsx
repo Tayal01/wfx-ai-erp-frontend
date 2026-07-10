@@ -1,6 +1,8 @@
 import { X } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 
+import { CountUp } from "./motion.jsx";
+
 export function cn(...parts) {
   return parts.filter(Boolean).join(" ");
 }
@@ -45,16 +47,26 @@ export function ErrorBanner({ message, action = null }) {
   );
 }
 
-export function MetricCard({ icon: Icon, label, value, tone = "bg-[#102227]", detail }) {
+export function MetricCard({
+  icon: Icon,
+  label,
+  value,
+  rawValue,
+  format = (n) => n.toLocaleString(),
+  chipClass = "bg-[#102227] text-white",
+  detail,
+}) {
   return (
     <SurfaceCard className="p-5">
       <div className="flex items-start justify-between gap-4">
-        <div className={cn("flex h-11 w-11 items-center justify-center rounded-2xl text-white", tone)}>
+        <div className={cn("flex h-11 w-11 items-center justify-center rounded-2xl", chipClass)}>
           <Icon aria-hidden="true" size={20} />
         </div>
       </div>
       <p className="mt-5 text-sm font-medium text-slate-500">{label}</p>
-      <p className="mt-1 text-3xl font-semibold text-ink">{value}</p>
+      <p className="mt-1 text-3xl font-semibold tabular-nums text-ink">
+        {typeof rawValue === "number" ? <CountUp format={format} value={rawValue} /> : value}
+      </p>
       {detail ? <p className="mt-2 text-sm text-slate-500">{detail}</p> : null}
     </SurfaceCard>
   );
@@ -66,7 +78,7 @@ export function CompactStat({ label, value, icon: Icon }) {
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</p>
-          <p className="mt-2 text-2xl font-semibold text-ink">{value}</p>
+          <p className="mt-2 text-2xl font-semibold tabular-nums text-ink">{value}</p>
         </div>
         {Icon ? (
           <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#f4efe8] text-[#102227]">

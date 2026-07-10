@@ -1,11 +1,13 @@
 import { motion } from "framer-motion";
-import { LockKeyhole, Mail, ShieldCheck, Sparkles } from "lucide-react";
+import { LockKeyhole, Mail, ShieldCheck } from "lucide-react";
 import { useState } from "react";
+
+import { Logo } from "../components/Logo.jsx";
 
 export default function LoginScreen({ onLogin, loading }) {
   const [form, setForm] = useState({
-    email: "merchandiser@wfx.com",
-    password: "demo1234",
+    email: "",
+    password: "",
   });
   const [error, setError] = useState("");
 
@@ -33,9 +35,7 @@ export default function LoginScreen({ onLogin, loading }) {
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_22%,rgba(232,121,60,0.28),transparent_28%),radial-gradient(circle_at_78%_14%,rgba(90,157,118,0.22),transparent_24%),linear-gradient(180deg,rgba(255,255,255,0.04),transparent)]" />
           <div className="relative">
             <div className="flex items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#f4efe8] text-[#102227]">
-                <Sparkles aria-hidden="true" size={24} />
-              </div>
+              <Logo className="h-12 w-12 shrink-0 rounded-[12px] ring-1 ring-white/15" />
               <div>
                 <p className="font-semibold tracking-wide">WFX AI ERP</p>
                 <p className="text-sm text-slate-300">Merchandising workspace</p>
@@ -88,9 +88,11 @@ export default function LoginScreen({ onLogin, loading }) {
             <div className="mt-2 flex items-center gap-3 rounded-2xl border border-slate-200 bg-[#fbfcfb] px-3 py-3 focus-within:border-[#d9773f] focus-within:ring-2 focus-within:ring-[#d9773f]/15">
               <Mail aria-hidden="true" className="text-slate-400" size={18} />
               <input
+                autoComplete="username"
                 className="w-full border-0 bg-transparent text-sm text-ink outline-none"
                 id="email"
                 onChange={(event) => setForm({ ...form, email: event.target.value })}
+                placeholder="name@company.com"
                 type="email"
                 value={form.email}
               />
@@ -102,9 +104,11 @@ export default function LoginScreen({ onLogin, loading }) {
             <div className="mt-2 flex items-center gap-3 rounded-2xl border border-slate-200 bg-[#fbfcfb] px-3 py-3 focus-within:border-[#d9773f] focus-within:ring-2 focus-within:ring-[#d9773f]/15">
               <LockKeyhole aria-hidden="true" className="text-slate-400" size={18} />
               <input
+                autoComplete="current-password"
                 className="w-full border-0 bg-transparent text-sm text-ink outline-none"
                 id="password"
                 onChange={(event) => setForm({ ...form, password: event.target.value })}
+                placeholder="Enter your password"
                 type="password"
                 value={form.password}
               />

@@ -13,21 +13,22 @@ import {
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
-import { askAssistant } from "../api.js";
+import { streamAssistant } from "../api.js";
 import { EmptyState, ErrorBanner, SectionTitle, SurfaceCard } from "../components/ui.jsx";
 
 const AGENT_STEPS = [
-  "Understanding your question...",
-  "Generating SQL...",
-  "Running query...",
-  "Summarizing results...",
+  "Understanding your question",
+  "Generating SQL",
+  "Running query",
+  "Summarizing results",
 ];
+const STATUS_STEP = { generating_sql: 1, running_query: 2, summarizing: 3 };
 const RESULT_PREVIEW_LIMIT = 8;
 const SUGGESTED_PROMPTS = [
   "Which buyer generated the highest revenue?",
   "Show pending invoices above ₹1,000",
-  "Top suppliers by order volume",
-  "Products with highest selling price",
+  "Top 5 suppliers by number of orders",
+  "Which buyers purchased garments above 220 GSM?",
 ];
 
 function ResultsTable({ rows }) {
@@ -99,27 +100,13 @@ function UserBubble({ content }) {
   );
 }
 
-function StatusBubble({ step }) {
-  return (
-    <motion.div animate={{ opacity: 1, y: 0 }} className="flex justify-start" initial={{ opacity: 0, y: 8 }}>
-      <div className="max-w-3xl rounded-[24px] border border-slate-200 bg-white px-5 py-4 text-sm text-slate-600 shadow-sm">
-        <div className="inline-flex items-center gap-2 font-medium text-ink">
-          <LoaderCircle aria-hidden="true" className="animate-spin text-[#4b8b69]" size={16} />
-          <span>{step}</span>
-        </div>
-        <AgentRunSteps activeStep={AGENT_STEPS.indexOf(step)} className="mt-4" />
-      </div>
-    </motion.div>
-  );
-}
-
 function AgentRunSteps({ activeStep = null, className = "" }) {
   return (
     <div className={`space-y-2 ${className}`}>
       {AGENT_STEPS.map((label, index) => {
-        const completed = activeStep === null;
-        const isDone = completed || index < activeStep;
-        const isActive = !completed && index === activeStep;
+        const allDone = activeStep === null;
+        const isDone = allDone || index < activeStep;
+        const isActive = !allDone && index === activeStep;
         return (
           <div className="flex items-center gap-2 text-xs text-slate-500" key={label}>
             {isDone ? (
@@ -129,7 +116,7 @@ function AgentRunSteps({ activeStep = null, className = "" }) {
             ) : (
               <Circle aria-hidden="true" className="text-slate-300" size={14} />
             )}
-            <span className={isActive ? "font-semibold text-ink" : ""}>{label.replace("...", "")}</span>
+            <span className={isActive ? "font-semibold text-ink" : ""}>{label}</span>
           </div>
         );
       })}
@@ -137,7 +124,11 @@ function AgentRunSteps({ activeStep = null, className = "" }) {
   );
 }
 
-function AssistantResultBubble({ message }) {
+function AssistantResultBubble({ message, activeStep = null, streaming = false }) {
+  const hasSql = Boolean(message.sql);
+  const rowsShown = Math.min(message.rows?.length || 0, RESULT_PREVIEW_LIMIT);
+  const summarizing = streaming && activeStep === 3;
+
   return (
     <motion.div animate={{ opacity: 1, y: 0 }} className="flex justify-start" initial={{ opacity: 0, y: 8 }}>
       <div className="max-w-3xl rounded-[24px] border border-slate-200 bg-white px-5 py-4 text-sm leading-7 text-slate-700 shadow-sm">
@@ -146,22 +137,36 @@ function AssistantResultBubble({ message }) {
             <Sparkles aria-hidden="true" size={13} />
             Agent run
           </p>
-          <AgentRunSteps className="mt-3" />
+          <AgentRunSteps activeStep={activeStep} className="mt-3" />
         </div>
 
         <div className="mt-4 space-y-3">
-          <CollapsibleRunSection icon={Database} title="Generated SQL" value="View query">
-            <pre className="overflow-x-auto rounded-2xl bg-[#102227] p-4 text-xs leading-6 text-[#d7ece2]">
-              {message.sql}
-            </pre>
+          <CollapsibleRunSection
+            defaultOpen={streaming}
+            icon={Database}
+            title="Generated SQL"
+            value={hasSql ? "View query" : "Generating…"}
+          >
+            {hasSql ? (
+              <pre className="overflow-x-auto rounded-2xl bg-[#102227] p-4 text-xs leading-6 text-[#d7ece2]">
+                {message.sql}
+              </pre>
+            ) : (
+              <p className="text-xs text-slate-500">Writing the query…</p>
+            )}
           </CollapsibleRunSection>
 
           <CollapsibleRunSection
+            defaultOpen={streaming}
             icon={Rows3}
             title="Result preview"
-            value={`${Math.min(message.rows?.length || 0, RESULT_PREVIEW_LIMIT)} of ${message.row_count} rows`}
+            value={message.rows?.length ? `${rowsShown} of ${message.row_count} rows` : "…"}
           >
-            <ResultsTable rows={message.rows} />
+            {message.rows?.length ? (
+              <ResultsTable rows={message.rows} />
+            ) : (
+              <p className="text-xs text-slate-500">Running the query…</p>
+            )}
           </CollapsibleRunSection>
         </div>
 
@@ -170,7 +175,14 @@ function AssistantResultBubble({ message }) {
             <Sparkles aria-hidden="true" size={12} />
             ERP insight
           </div>
-          <p>{message.summary}</p>
+          {message.summary ? (
+            <p>
+              {message.summary}
+              {summarizing ? <span className="ml-0.5 inline-block animate-pulse text-[#4b8b69]">▍</span> : null}
+            </p>
+          ) : (
+            <p className="text-slate-500">{streaming ? "Summarizing results…" : ""}</p>
+          )}
         </div>
       </div>
     </motion.div>
@@ -203,25 +215,12 @@ export default function AssistantView({ getApiErrorMessage, notifyError }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [messages, setMessages] = useState([]);
-  const [activeStep, setActiveStep] = useState(0);
+  const [streaming, setStreaming] = useState(null);
   const chatEndRef = useRef(null);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, activeStep, loading]);
-
-  useEffect(() => {
-    if (!loading) {
-      return undefined;
-    }
-
-    setActiveStep(0);
-    const intervalId = window.setInterval(() => {
-      setActiveStep((current) => (current < AGENT_STEPS.length - 1 ? current + 1 : current));
-    }, 1200);
-
-    return () => window.clearInterval(intervalId);
-  }, [loading]);
+  }, [messages, streaming, loading]);
 
   async function submitQuestion(questionText) {
     const question = questionText.trim();
@@ -234,25 +233,56 @@ export default function AssistantView({ getApiErrorMessage, notifyError }) {
     setInput("");
     setMessages((current) => [...current, { type: "user", content: question }]);
 
+    const acc = { step: 0, sql: "", rows: [], row_count: 0, summary: "" };
+    setStreaming({ ...acc });
+    let hadError = false;
+
     try {
-      const result = await askAssistant(question);
-      setMessages((current) => [
-        ...current.filter((message) => message.type !== "status"),
-        {
-          type: "assistant",
-          summary: result.summary,
-          sql: result.sql,
-          rows: result.rows,
-          row_count: result.row_count,
+      await streamAssistant(question, {
+        onEvent: (event, data) => {
+          if (event === "status") {
+            acc.step = STATUS_STEP[data.step] ?? acc.step;
+          } else if (event === "sql") {
+            acc.sql = data.sql || "";
+            acc.step = 1;
+          } else if (event === "rows") {
+            acc.rows = data.rows || [];
+            acc.row_count = data.row_count || 0;
+            acc.step = 2;
+          } else if (event === "summary") {
+            acc.summary += data.delta || "";
+            acc.step = 3;
+          } else if (event === "done") {
+            acc.row_count = data.row_count ?? acc.row_count;
+          } else if (event === "error") {
+            hadError = true;
+            const message = data.detail || "Unable to answer that ERP question.";
+            setError(message);
+            notifyError("assistant-chat", message);
+          }
+          setStreaming({ ...acc });
         },
-      ]);
+      });
+
+      if (!hadError) {
+        setMessages((current) => [
+          ...current,
+          {
+            type: "assistant",
+            sql: acc.sql,
+            rows: acc.rows,
+            row_count: acc.row_count,
+            summary: acc.summary,
+          },
+        ]);
+      }
     } catch (requestError) {
       const message = getApiErrorMessage(requestError, "Unable to answer that ERP question.");
       setError(message);
-      setMessages((current) => current.filter((item) => item.type !== "status"));
       notifyError("assistant-chat", message);
     } finally {
       setLoading(false);
+      setStreaming(null);
     }
   }
 
@@ -283,9 +313,7 @@ export default function AssistantView({ getApiErrorMessage, notifyError }) {
             isEmptyChat ? "flex items-center justify-center" : "space-y-4"
           }`}
         >
-          {isEmptyChat ? (
-            <SuggestedPrompts disabled={loading} onSelect={submitQuestion} />
-          ) : null}
+          {isEmptyChat ? <SuggestedPrompts disabled={loading} onSelect={submitQuestion} /> : null}
 
           {messages.map((message, index) => {
             if (message.type === "user") {
@@ -297,7 +325,9 @@ export default function AssistantView({ getApiErrorMessage, notifyError }) {
             return null;
           })}
 
-          {loading ? <StatusBubble step={AGENT_STEPS[activeStep]} /> : null}
+          {loading && streaming ? (
+            <AssistantResultBubble activeStep={streaming.step} message={streaming} streaming />
+          ) : null}
           <div ref={chatEndRef} />
         </div>
 

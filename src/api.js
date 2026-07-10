@@ -2,8 +2,11 @@ import axios from "axios";
 
 import { supabase } from "./supabaseClient.js";
 
+// Normalize once: strip any trailing slash so we never build "https://host//api/...".
+export const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000").replace(/\/+$/, "");
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000",
+  baseURL: API_BASE_URL,
 });
 
 // Attach the current Supabase access token to every backend request.
@@ -85,9 +88,8 @@ export async function askAssistant(question) {
 export async function streamAssistant(question, { onEvent, signal } = {}) {
   const { data } = await supabase.auth.getSession();
   const token = data.session?.access_token;
-  const baseURL = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000";
 
-  const response = await fetch(`${baseURL}/api/ai/chat/stream`, {
+  const response = await fetch(`${API_BASE_URL}/api/ai/chat/stream`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

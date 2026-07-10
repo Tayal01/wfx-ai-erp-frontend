@@ -45,7 +45,7 @@ const defaultFilters = {
 };
 
 const DASHBOARD_CACHE_KEY = "wfx-dashboard-summary";
-const DASHBOARD_CACHE_TTL_MS = 60 * 1000;
+const DASHBOARD_CACHE_TTL_MS = 120 * 1000;
 
 function getApiErrorMessage(error, fallbackMessage) {
   const detail = error?.response?.data?.detail;
@@ -358,12 +358,18 @@ function App() {
   }, []);
 
   useEffect(() => {
-    if (!user) {
+    // Only load the dashboard summary when the Dashboard is actually open,
+    // and skip the request entirely if we still have a fresh cached copy.
+    if (!user || activeView !== "dashboard") {
+      return;
+    }
+
+    if (getCachedDashboardSummary()) {
       return;
     }
 
     loadDashboardSummary();
-  }, [user]);
+  }, [user, activeView]);
 
   useEffect(() => {
     if (!user || activeView !== "products") {
